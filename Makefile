@@ -1,32 +1,37 @@
 TMP=./tmp
-PROJECT_ID=dev-status-api
 ZONE=us-west1-a
 
 VERSION=$(shell date +%s)
 
-SERVICE_DEPLOY_LOCATION=$(shell echo "gs://${PROJECT_ID}/service-${VERSION}.tar")
+PROJECT_ID=status-api-dev
+APPNAME_RUNNER=api-status-runner
+BUNDLE_LOCATION_RUNNER=$(shell echo "gs://${PROJECT_ID}/${APPNAME_RUNNER}/${VERSION}.tar")
 
-all: build-service
+all: build-runner
 
-build-service:
-	GOOS=linux GOARCH=amd64 go build -v -o ${TMP}/service ./service
-	tar -c -f ${TMP}/service-bundle.tar -C ${TMP} service
+build-runner:
+	GOOS=linux GOARCH=amd64 go build -v -o ${TMP}/runner ./runner
+	tar -c -f ${TMP}/runner-bundle.tar -C ${TMP} runner
 
-deploy-service: build-service
-	test "$(SERVICE_DEPLOY_LOCATION)"
+deploy-runner: build-runner
+	test "$(BUNDLE_LOCATION_RUNNER)"
 
-	gsutil cp ${TMP}/service-bundle.tar ${SERVICE_DEPLOY_LOCATION}
-	echo "uploaded to ${SERVICE_DEPLOY_LOCATION}"
+	gsutil cp ${TMP}/runner-bundle.tar ${BUNDLE_LOCATION_RUNNER}
+	echo "uploaded to ${BUNDLE_LOCATION_RUNNER}"
 
-	gcloud compute instances create ${PROJECT_ID} \
+	gcloud compute instances create ${APPNAME_RUNNER} \
 		--image-family=debian-9 \
 		--image-project=debian-cloud \
 		--machine-type=g1-small \
 		--scopes datastore,cloud-platform \
-		--metadata app-location=${SERVICE_DEPLOY_LOCATION} \
-		--metadata-from-file startup-script=deploy/startup-service.sh \
+		--metadata app-location=${BUNDLE_LOCATION_RUNNER} \
+		--metadata-from-file startup-script=deploy/startup-runner.sh \
+		--preemptible \
 		--zone ${ZONE}
+
+ssh-runner:
+	gcloud compute --project "${PROJECT_ID}" ssh --zone "${ZONE}" "${APPNAME_RUNNER}"
 
 teardown:
 	gcloud config set compute/zone ${ZONE}
-	gcloud compute instances delete ${PROJECT_ID}
+	gcloud compute instances delete ${APPNAME_RUNNER}

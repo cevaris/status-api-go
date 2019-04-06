@@ -11,23 +11,23 @@ service google-fluentd restart &
 
 # Install dependencies from apt
 apt-get update
-apt-get install -yq ca-certificates supervisor
+apt-get install -yq ca-certificates supervisor less
 
 # Get the application tar from the GCS bucket.
 gsutil cp $DEPLOY_LOCATION /app.tar
 mkdir -p /app
 tar -x -f /app.tar -C /app
-chmod +x /app/app
+chmod +x /app/runner
 
 # Create a goapp user. The application will run as this user.
-getent passwd goapp || useradd -m -d /home/goapp goapp
+getent passwd goapp || /usr/sbin/useradd -m -d /home/goapp goapp
 chown -R goapp:goapp /app
 
 # Configure supervisor to run the Go app.
 cat >/etc/supervisor/conf.d/goapp.conf << EOF
 [program:goapp]
 directory=/app
-command=/app/app
+command=/app/runner
 autostart=true
 autorestart=true
 user=goapp
