@@ -9,6 +9,9 @@ BUNDLE_LOCATION_RUNNER=$(shell echo "gs://${PROJECT_ID}/${APPNAME_RUNNER}/${VERS
 
 all: build-runner
 
+run-runner: build-runner
+	go run runner/main.go
+
 build-runner:
 	GOOS=linux GOARCH=amd64 go build -v -o ${TMP}/runner ./runner
 	tar -c -f ${TMP}/runner-bundle.tar -C ${TMP} runner
