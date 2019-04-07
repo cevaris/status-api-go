@@ -1,12 +1,14 @@
 package fileio
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -21,8 +23,8 @@ type witeTextResponse struct {
 }
 
 // WriteFileReport reports on writing a message to https://www.file.io
-func WriteFileReport() (report.ApiTestReport, error) {
-	var apiReport report.ApiTestReport
+func WriteFileReport() (report.ApiReport, error) {
+	var apiReport report.ApiReport
 	ctx := context.Background()
 	now := time.Now().UTC()
 
@@ -38,10 +40,7 @@ func WriteFileReport() (report.ApiTestReport, error) {
 	}
 	defer os.Remove(tmpFile.Name())
 
-	data := url.Values{}
-	data.Add("file", tmpFile.Name())
-
-	resp, err := http.PostForm("https://file.io?expires=1w", data)
+	resp, err := uploadFile("https://file.io", tmpFile.Name())
 	if err != nil {
 		reportLog = append(reportLog, "starting failed: "+err.Error())
 		logger.Error(ctx, err)
@@ -76,7 +75,7 @@ func WriteFileReport() (report.ApiTestReport, error) {
 		reportState = report.Fail
 	}
 
-	testReport := report.ApiTestReport{
+	testReport := report.ApiReport{
 		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
 		ReportState:  reportState,
 		Report:       strings.Join(reportLog[:], "\n"),
@@ -85,6 +84,34 @@ func WriteFileReport() (report.ApiTestReport, error) {
 
 	logger.Info(ctx, "ran WriteFileReport\n", fmt.Sprintf("%+v", testReport))
 	return testReport, nil
+}
+
+func uploadFile(postURL string, filename string) (*http.Response, error) {
+	bodyBuf := &bytes.Buffer{}
+	bodyWriter := multipart.NewWriter(bodyBuf)
+
+	fileWriter, err := bodyWriter.CreateFormFile("file", filename)
+	if err != nil {
+		return nil, err
+	}
+
+	// open file handle
+	fh, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer fh.Close()
+
+	//iocopy
+	_, err = io.Copy(fileWriter, fh)
+	if err != nil {
+		return nil, err
+	}
+
+	contentType := bodyWriter.FormDataContentType()
+	bodyWriter.Close()
+
+	return http.Post(postURL, contentType, bodyBuf)
 }
 
 func createTmpFile(msg string) (*os.File, error) {

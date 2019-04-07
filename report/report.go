@@ -21,8 +21,8 @@ const (
 	Inconclusive ReportState = 2
 )
 
-// ApiTestReport is written to disk
-type ApiTestReport struct {
+// ApiReport is written to disk
+type ApiReport struct {
 	LatencyMS    int64
 	ReportState  ReportState
 	Report       string

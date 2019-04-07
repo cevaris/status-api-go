@@ -14,8 +14,8 @@ import (
 )
 
 // WriteTextReport reports on writing a message to https://www.file.io
-func WriteTextReport() (report.ApiTestReport, error) {
-	var apiReport report.ApiTestReport
+func WriteTextReport() (report.ApiReport, error) {
+	var apiReport report.ApiReport
 
 	ctx := context.Background()
 	now := time.Now().UTC()
@@ -61,7 +61,7 @@ func WriteTextReport() (report.ApiTestReport, error) {
 		reportState = report.Fail
 	}
 
-	testReport := report.ApiTestReport{
+	testReport := report.ApiReport{
 		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
 		ReportState:  reportState,
 		Report:       strings.Join(reportLog[:], "\n"),
