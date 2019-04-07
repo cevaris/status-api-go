@@ -14,7 +14,7 @@ import (
 )
 
 // WriteTextReport reports on writing a message to https://www.file.io
-func WriteTextReport() (report.ApiReport, error) {
+func WriteTextReport(name string) (report.ApiReport, error) {
 	var apiReport report.ApiReport
 
 	ctx := context.Background()
@@ -68,6 +68,6 @@ func WriteTextReport() (report.ApiReport, error) {
 		CreatedAtSec: now.Unix(),
 	}
 
-	logger.Info(ctx, "ran WriteTextReport\n", fmt.Sprintf("%+v", testReport))
+	logger.Info(ctx, "ran", name, fmt.Sprintf("%+v", testReport))
 	return apiReport, err
 }

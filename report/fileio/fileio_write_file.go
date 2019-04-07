@@ -23,7 +23,7 @@ type witeTextResponse struct {
 }
 
 // WriteFileReport reports on writing a message to https://www.file.io
-func WriteFileReport() (report.ApiReport, error) {
+func WriteFileReport(name string) (report.ApiReport, error) {
 	var apiReport report.ApiReport
 	ctx := context.Background()
 	now := time.Now().UTC()
@@ -82,7 +82,7 @@ func WriteFileReport() (report.ApiReport, error) {
 		CreatedAtSec: now.Unix(),
 	}
 
-	logger.Info(ctx, "ran WriteFileReport\n", fmt.Sprintf("%+v", testReport))
+	logger.Info(ctx, "ran", name, fmt.Sprintf("%+v", testReport))
 	return testReport, nil
 }
 

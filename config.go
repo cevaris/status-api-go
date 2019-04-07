@@ -10,7 +10,7 @@ var ApiTestStore = map[string]int64{
 	"fileio_write_file": 0,
 }
 
-var Lookup = map[string]func() (report.ApiReport, error){
+var Lookup = map[string]func(string) (report.ApiReport, error){
 	"fileio_write_text": fileio.WriteTextReport,
 	"fileio_write_file": fileio.WriteFileReport,
 }

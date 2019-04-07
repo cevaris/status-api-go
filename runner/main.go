@@ -50,7 +50,7 @@ func forever() {
 			if now-int64(lastRanSec) > 60 {
 				// time to run again
 				if f, ok := status.Lookup[k]; ok {
-					f() // launch test
+					f(k) // launch test
 					status.ApiTestStore[k] = time.Now().Unix()
 				}
 			}
