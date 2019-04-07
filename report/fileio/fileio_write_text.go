@@ -61,13 +61,13 @@ func WriteTextReport(name string) (report.ApiReport, error) {
 		reportState = report.Fail
 	}
 
-	testReport := report.ApiReport{
+	apiReport = report.ApiReport{
 		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
 		ReportState:  reportState,
 		Report:       strings.Join(reportLog[:], "\n"),
 		CreatedAtSec: now.Unix(),
 	}
 
-	logger.Info(ctx, "ran", name, fmt.Sprintf("%+v", testReport))
+	logger.Info(ctx, "ran", name, fmt.Sprintf("%+v", apiReport))
 	return apiReport, err
 }

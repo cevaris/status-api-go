@@ -75,15 +75,15 @@ func WriteFileReport(name string) (report.ApiReport, error) {
 		reportState = report.Fail
 	}
 
-	testReport := report.ApiReport{
+	apiReport = report.ApiReport{
 		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
 		ReportState:  reportState,
 		Report:       strings.Join(reportLog[:], "\n"),
 		CreatedAtSec: now.Unix(),
 	}
 
-	logger.Info(ctx, "ran", name, fmt.Sprintf("%+v", testReport))
-	return testReport, nil
+	logger.Info(ctx, "ran", name, fmt.Sprintf("%+v", apiReport))
+	return apiReport, nil
 }
 
 func uploadFile(postURL string, filename string) (*http.Response, error) {
