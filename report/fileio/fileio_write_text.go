@@ -15,12 +15,12 @@ import (
 )
 
 // {"success":true,"key":"tt67yI","link":"https://file.io/tt67yI","expiry":"14 days"}
-type witeTextResponse struct {
+type writeFileJSON struct {
 	Success bool `json:"success"`
 }
 
-// WriteTextReport reports on writing a message to https://www.file.io
-func WriteTextReport() {
+// WriteFileReport reports on writing a message to https://www.file.io
+func WriteFileReport() {
 	logger := timber.NewOpLogger("fileio_write_text")
 	ctx := context.Background()
 	now := time.Now().UTC()
@@ -47,15 +47,15 @@ func WriteTextReport() {
 	reportLog = append(reportLog, fmt.Sprintf("response status: %d", resp.StatusCode))
 	reportLog = append(reportLog, fmt.Sprintf("response body: %s", body))
 
-	var writeTextRes witeTextResponse
-	err = json.Unmarshal(body, &writeTextRes)
+	var writeFile writeFileJSON
+	err = json.Unmarshal(body, &writeFile)
 	if err != nil {
 		reportLog = append(reportLog, "failed parsing body: "+err.Error())
 		logger.Error(ctx, err)
 	}
 
 	var reportState report.ReportState
-	if resp.StatusCode == http.StatusOK && writeTextRes.Success {
+	if resp.StatusCode == http.StatusOK && writeFile.Success {
 		reportState = report.Pass
 	} else if resp.StatusCode == http.StatusBadRequest {
 		reportState = report.Inconclusive
@@ -70,5 +70,5 @@ func WriteTextReport() {
 		CreatedAtSec: now.Unix(),
 	}
 
-	logger.Info(ctx, "ran WriteTextReport\n", testReport)
+	logger.Info(ctx, "ran WriteFileReport\n", testReport)
 }
