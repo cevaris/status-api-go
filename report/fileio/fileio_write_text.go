@@ -1,4 +1,4 @@
-package report
+package fileio
 
 import (
 	"context"
@@ -9,6 +9,9 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/cevaris/status/report"
+	"github.com/cevaris/timber"
 )
 
 // {"success":true,"key":"tt67yI","link":"https://file.io/tt67yI","expiry":"14 days"}
@@ -16,20 +19,21 @@ type witeTextResponse struct {
 	Success bool `json:"success"`
 }
 
-// FileioWriteText reports on writing a message to https://www.file.io
-func FileioWriteText() {
+// WriteTextReport reports on writing a message to https://www.file.io
+func WriteTextReport() {
+	logger := timber.NewOpLogger("fileio_write_text")
 	ctx := context.Background()
 	now := time.Now().UTC()
 
-	report := make([]string, 0)
-	report = append(report, "starting test")
+	reportLog := make([]string, 0)
+	reportLog = append(reportLog, "starting test")
 
 	data := url.Values{}
 	data.Add("text", fmt.Sprintf("secret number %d", now.Unix()))
 
 	resp, err := http.PostForm("https://file.io", data)
 	if err != nil {
-		report = append(report, "starting failed: "+err.Error())
+		reportLog = append(reportLog, "starting failed: "+err.Error())
 		logger.Error(ctx, err)
 	}
 	defer resp.Body.Close()
@@ -40,31 +44,31 @@ func FileioWriteText() {
 	if err != nil {
 		logger.Error(ctx, err)
 	}
-	report = append(report, fmt.Sprintf("response status: %d", resp.StatusCode))
-	report = append(report, fmt.Sprintf("response body: %s", body))
+	reportLog = append(reportLog, fmt.Sprintf("response status: %d", resp.StatusCode))
+	reportLog = append(reportLog, fmt.Sprintf("response body: %s", body))
 
 	var writeTextRes witeTextResponse
 	err = json.Unmarshal(body, &writeTextRes)
 	if err != nil {
-		report = append(report, "failed parsing body: "+err.Error())
+		reportLog = append(reportLog, "failed parsing body: "+err.Error())
 		logger.Error(ctx, err)
 	}
 
-	var testState TestResultState
+	var reportState report.ReportState
 	if resp.StatusCode == http.StatusOK && writeTextRes.Success {
-		testState = Pass
+		reportState = report.Pass
 	} else if resp.StatusCode == http.StatusBadRequest {
-		testState = Inconclusive
+		reportState = report.Inconclusive
 	} else {
-		testState = Fail
+		reportState = report.Fail
 	}
 
-	testReport := ApiTestReport{
+	testReport := report.ApiTestReport{
 		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
-		TestState:    testState,
-		Report:       strings.Join(report[:], "\n"),
+		ReportState:  reportState,
+		Report:       strings.Join(reportLog[:], "\n"),
 		CreatedAtSec: now.Unix(),
 	}
 
-	logger.Info(ctx, "ran fileioWriteText\n", testReport)
+	logger.Info(ctx, "ran WriteTextReport\n", testReport)
 }
