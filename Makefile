@@ -9,8 +9,8 @@ BUNDLE_LOCATION_RUNNER=$(shell echo "gs://${PROJECT_ID}/${APPNAME_RUNNER}/${VERS
 
 all: build-runner
 
-run-runner: build-runner
-	go run runner/main.go
+run-runner:
+	GOOGLE_APPLICATION_CREDENTIALS=${HOME}/${PROJECT_ID}.json PROJECT_ID=${PROJECT_ID} go run runner/main.go
 
 build-runner:
 	GOOS=linux GOARCH=amd64 go build -v -o ${TMP}/runner ./runner
@@ -38,3 +38,4 @@ ssh-runner:
 teardown:
 	gcloud config set compute/zone ${ZONE}
 	gcloud compute instances delete ${APPNAME_RUNNER}
+	gcloud beta emulators datastore env-unset
