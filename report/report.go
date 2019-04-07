@@ -9,7 +9,8 @@ import (
 	"github.com/cevaris/timber"
 )
 
-var logger = timber.NewOpLogger("runner")
+// Log is a logger for all report runners
+var Log = timber.NewOpLogger("report-runnner")
 
 // ReportState state of the report
 type ReportState int
