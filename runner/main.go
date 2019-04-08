@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"os"
+	"sync"
 	"time"
+
+	"github.com/cevaris/status/report"
 
 	"github.com/cevaris/status"
 	"github.com/cevaris/timber"
@@ -15,7 +17,7 @@ import (
 
 var projectID string
 var dsClient *datastore.Client
-var logger timber.Logger
+var logger = timber.NewOpLogger("runner")
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
@@ -23,44 +25,53 @@ func main() {
 	ctx := context.Background()
 	projectID = os.Getenv("PROJECT_ID")
 
-	logger = timber.NewOpLogger("runner")
-
 	_, err := datastore.NewClient(ctx, projectID)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("starting runner...")
-	go forever()
-	select {} // block forever
+	logger.Info(ctx, "starting runner...")
+	launch(ctx)
 }
 
-// nextWaitSecs should check at least once a minute for new jobs to execute
-func nextSleepDuration() time.Duration {
-	return time.Second * (25 + time.Duration(rand.Intn(5)))
+func delay(duration time.Duration) {
+	time.Sleep(duration)
 }
 
-func forever() {
-	fmt.Println("started runner")
-	for {
-		// do work
-
-		for k, lastRanSec := range status.ApiTestStore {
-			now := time.Now().Unix()
-			if now-int64(lastRanSec) > 60 {
-				// time to run again
-				if f, ok := status.Lookup[k]; ok {
-					f(k) // launch test
-					status.ApiTestStore[k] = time.Now().Unix()
-				}
-			}
-		}
-
+func periodicReport(name string, duration time.Duration, fn func(string) (report.ApiReport, error)) {
+	for ; true; <-time.Tick(duration) {
 		ctx := context.Background()
-		logger.Info(ctx, "work")
-
-		sleepDuration := nextSleepDuration()
-		fmt.Println("sleeping for ", sleepDuration, "seconds")
-		time.Sleep(sleepDuration)
+		logger.Info(ctx, "launching runner", name)
+		report, err := fn(name)
+		if err != nil {
+			logger.Error(ctx, "failed to run report", name, err)
+		} else {
+			logger.Info(ctx, "successful report", name, report)
+		}
 	}
+	panic("runner died :( " + name)
+}
+
+func launch(ctx context.Context) {
+	var waitgroup sync.WaitGroup
+	var curr = 0
+	for runnerName, fn := range status.APIReportCatalog {
+		waitgroup.Add(1)
+
+		go func(wg *sync.WaitGroup, i int) {
+			defer wg.Done()
+			logger.Info(ctx, "initial runner delay", runnerName)
+			delay(time.Second * time.Duration(i%60))
+			logger.Info(ctx, "loading runner", runnerName)
+			periodicReport(runnerName, time.Duration(60*time.Second), fn)
+		}(&waitgroup, curr)
+
+		curr = curr + 1
+	}
+
+	logger.Info(ctx, "started runners")
+
+	// block so we do not exit
+	// we dont expect the routines to complete
+	waitgroup.Wait()
 }
