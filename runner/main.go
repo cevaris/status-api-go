@@ -39,6 +39,8 @@ func delay(duration time.Duration) {
 }
 
 func periodicReport(name string, duration time.Duration, fn func(string) (report.ApiReport, error)) {
+	defer panic("runner died :( " + name)
+
 	for ; true; <-time.Tick(duration) {
 		ctx := context.Background()
 		logger.Info(ctx, "launching runner", name)
@@ -49,7 +51,6 @@ func periodicReport(name string, duration time.Duration, fn func(string) (report
 			logger.Info(ctx, "successful report", name, report)
 		}
 	}
-	panic("runner died :( " + name)
 }
 
 func launch(ctx context.Context) {
