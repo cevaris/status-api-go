@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cevaris/timber"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -15,41 +16,42 @@ import (
 
 // WriteTextReport reports on writing a message to https://www.file.io
 func WriteTextReport(name string) (report.ApiReport, error) {
+	logger := timber.NewOpLogger(name)
+	reportLogger := report.NewLogger(logger)
 	ctx := context.Background()
-	now := time.Now().UTC()
-
-	reportLog := make([]string, 0)
-	reportLog = append(reportLog, "starting test")
+	reportLogger.Debug(ctx, "starting test:", name)
 
 	data := url.Values{}
-	data.Add("text", fmt.Sprintf("secret number %d", now.Unix()))
+	data.Add("text", fmt.Sprintf("secret number %d", time.Now().UTC().Unix()))
+	reportLogger.Debug(ctx, "posting: ", data)
 
+
+	now := time.Now().UTC()
 	resp, err := http.PostForm("https://file.io", data)
 	if err != nil {
-		reportLog = append(reportLog, "starting failed: "+err.Error())
-		logger.Error(ctx, err)
-		return report.NewError(name, reportLog), err
+		reportLogger.Error(ctx, "post failed: "+err.Error())
+		return report.NewError(name, reportLogger), err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			logger.Error(ctx, err)
+			reportLogger.Error(ctx, "failed to close response reader:", err)
 		}
 	}()
-
+	later := time.Now().UTC()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logger.Error(ctx, err)
-		return report.NewError(name, reportLog), err
+		reportLogger.Error(ctx, "failed reading response body: "+err.Error())
+		return report.NewError(name, reportLogger), err
 	}
-	reportLog = append(reportLog, fmt.Sprintf("response status: %d", resp.StatusCode))
-	reportLog = append(reportLog, fmt.Sprintf("response body: %s", body))
+	reportLogger.Debug(ctx, fmt.Sprintf("response status: %d", resp.StatusCode))
+	reportLogger.Debug(ctx, fmt.Sprintf("response body: %s", body))
 
 	var writeFile ResponseJSON
 	err = json.Unmarshal(body, &writeFile)
 	if err != nil {
-		reportLog = append(reportLog, "failed parsing body: "+err.Error())
-		return report.NewError(name, reportLog), err
+		reportLogger.Error(ctx, "failed parsing body: "+err.Error())
+		return report.NewError(name, reportLogger), err
 	}
 
 	var reportState report.ReportState
@@ -61,14 +63,15 @@ func WriteTextReport(name string) (report.ApiReport, error) {
 		reportState = report.Fail
 	}
 
-	later := time.Now().UTC()
+
 	apiReport := report.ApiReport{
+		Name:         name,
 		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
 		ReportState:  reportState,
-		Report:       strings.Join(reportLog[:], "\n"),
+		Report:       strings.Join(reportLogger.Collect()[:], "\n"),
 		CreatedAtSec: now.Unix(),
 	}
 
-	logger.Info(ctx, "ran", name)
+	reportLogger.Info(ctx, "ran", name)
 	return apiReport, err
 }

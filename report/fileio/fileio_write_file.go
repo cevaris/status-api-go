@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cevaris/timber"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -16,60 +17,51 @@ import (
 	"github.com/cevaris/status/report"
 )
 
-// {"success":true,"key":"tt67yI","link":"https://file.io/tt67yI","expiry":"14 days"}
-type witeTextResponse struct {
-	Success bool   `json:"success"`
-	Error   string `json:"error"`
-}
-
 // WriteFileReport reports on writing a message to https://www.file.io
 func WriteFileReport(name string) (report.ApiReport, error) {
+	reportLogger := report.NewLogger(timber.NewOpLogger(name))
 	ctx := context.Background()
 	now := time.Now().UTC()
 
-	reportLog := make([]string, 0)
-	reportLog = append(reportLog, "starting test")
+	reportLogger.Debug(ctx, "starting test")
 
 	msg := fmt.Sprintf("secret number %d", now.Unix())
 	tmpFile, err := createTmpFile(msg)
 	if err != nil {
-		reportLog = append(reportLog, "failed creating temp file: "+err.Error())
-		logger.Error(ctx, err)
-		return report.NewError(name, reportLog), err
-	} else {
-		defer func() {
-			if err := os.Remove(tmpFile.Name()); err != nil {
-				logger.Error(ctx, "failed to remove temp file", err)
-			}
-		}()
+		reportLogger.Error(ctx, "failed creating temp file: "+err.Error())
+		return report.NewError(name, reportLogger), err
 	}
+	defer func() {
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			reportLogger.Error(ctx, "failed to remove temp file", err)
+		}
+	}()
 
 	resp, err := uploadFile(ctx, "https://file.io", tmpFile.Name())
 	if err != nil {
-		reportLog = append(reportLog, "starting failed: "+err.Error())
-		logger.Error(ctx, err)
-		return report.NewError(name, reportLog), err
-	} else {
-		defer func() {
-			if err := resp.Body.Close(); err != nil {
-				logger.Error(ctx, "failed to remove temp file", err)
-			}
-		}()
+		reportLogger.Debug(ctx, "starting failed: "+err.Error())
+		reportLogger.Error(ctx, err)
+		return report.NewError(name, reportLogger), err
 	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			reportLogger.Error(ctx, "failed to remove temp file", err)
+		}
+	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logger.Error(ctx, err)
-		return report.NewError(name, reportLog), err
+		reportLogger.Error(ctx, err)
+		return report.NewError(name, reportLogger), err
 	}
-	reportLog = append(reportLog, fmt.Sprintf("response status: %d", resp.StatusCode))
-	reportLog = append(reportLog, fmt.Sprintf("response body: %s", body))
+	reportLogger.Debug(ctx, fmt.Sprintf("response status: %d", resp.StatusCode))
+	reportLogger.Debug(ctx, fmt.Sprintf("response body: %s", body))
 
 	var writeText ResponseJSON
 	err = json.Unmarshal(body, &writeText)
 	if err != nil {
-		reportLog = append(reportLog, "failed parsing body: "+err.Error())
-		return report.NewError(name, reportLog), err
+		reportLogger.Debug(ctx, "failed parsing body: "+err.Error())
+		return report.NewError(name, reportLogger), err
 	}
 
 	var reportState report.ReportState
@@ -83,13 +75,14 @@ func WriteFileReport(name string) (report.ApiReport, error) {
 
 	later := time.Now().UTC()
 	apiReport := report.ApiReport{
+		Name:         name,
 		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
 		ReportState:  reportState,
-		Report:       strings.Join(reportLog[:], "\n"),
+		Report:       strings.Join(reportLogger.Collect()[:], "\n"),
 		CreatedAtSec: report.NowUTCMinute().Unix(),
 	}
 
-	logger.Info(ctx, "ran", name)
+	reportLogger.Info(ctx, "ran", name)
 	return apiReport, nil
 }
 
@@ -106,13 +99,12 @@ func uploadFile(ctx context.Context, postURL string, filename string) (*http.Res
 	fh, err := os.Open(filename)
 	if err != nil {
 		return nil, err
-	} else {
-		defer func() {
-			if err := fh.Close(); err != nil {
-				logger.Error(ctx, "failed to open file", filename, err)
-			}
-		}()
 	}
+	defer func() {
+		if err := fh.Close(); err != nil {
+			fmt.Println(ctx, "defer: failed to open file", filename, err)
+		}
+	}()
 
 	//iocopy
 	_, err = io.Copy(fileWriter, fh)
@@ -122,7 +114,7 @@ func uploadFile(ctx context.Context, postURL string, filename string) (*http.Res
 
 	contentType := bodyWriter.FormDataContentType()
 	if err := bodyWriter.Close(); err != nil {
-		logger.Error(ctx, "failed to close upload writer", err)
+		return nil, err
 	}
 
 	return http.Post(postURL, contentType, bodyBuf)

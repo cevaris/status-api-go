@@ -23,6 +23,7 @@ const (
 
 // ApiReport is written to disk
 type ApiReport struct {
+	Name         string
 	LatencyMS    int64
 	ReportState  ReportState
 	Report       string
@@ -63,12 +64,12 @@ func FmtHTTPRequest(r *http.Request) string {
 	return strings.Join(request, "\n")
 }
 
-
-func NewError(name string, reportLog []string) ApiReport {
+func NewError(name string, reportLogger *Logger) ApiReport {
 	return ApiReport{
+		Name:         name,
 		LatencyMS:    0,
 		ReportState:  Fail,
-		Report:       strings.Join(reportLog[:], "\n"),
+		Report:       strings.Join(reportLogger.Collect()[:], "\n"),
 		CreatedAtSec: NowUTCMinute().Unix(),
 	}
 }
