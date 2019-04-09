@@ -31,7 +31,7 @@ type ApiReport struct {
 
 // NowMinute returns now, truncated down to the minute. Useful for timestamping with minute grainularity.
 // https://play.golang.org/p/cpW3itpYHia
-func NowMinute() time.Time {
+func NowUTCMinute() time.Time {
 	now := time.Now().UTC()
 	return now.Truncate(60 * time.Second)
 }
@@ -61,4 +61,14 @@ func FmtHTTPRequest(r *http.Request) string {
 	}
 	// Return the request as a string
 	return strings.Join(request, "\n")
+}
+
+
+func NewError(name string, reportLog []string) ApiReport {
+	return ApiReport{
+		LatencyMS:    0,
+		ReportState:  Fail,
+		Report:       strings.Join(reportLog[:], "\n"),
+		CreatedAtSec: NowUTCMinute().Unix(),
+	}
 }

@@ -15,8 +15,6 @@ import (
 
 // WriteTextReport reports on writing a message to https://www.file.io
 func WriteTextReport(name string) (report.ApiReport, error) {
-	var apiReport report.ApiReport
-
 	ctx := context.Background()
 	now := time.Now().UTC()
 
@@ -30,16 +28,19 @@ func WriteTextReport(name string) (report.ApiReport, error) {
 	if err != nil {
 		reportLog = append(reportLog, "starting failed: "+err.Error())
 		logger.Error(ctx, err)
-		return apiReport, err
+		return report.NewError(name, reportLog), err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			logger.Error(ctx, err)
+		}
+	}()
 
-	later := time.Now().UTC()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		logger.Error(ctx, err)
-		return apiReport, err
+		return report.NewError(name, reportLog), err
 	}
 	reportLog = append(reportLog, fmt.Sprintf("response status: %d", resp.StatusCode))
 	reportLog = append(reportLog, fmt.Sprintf("response body: %s", body))
@@ -48,8 +49,7 @@ func WriteTextReport(name string) (report.ApiReport, error) {
 	err = json.Unmarshal(body, &writeFile)
 	if err != nil {
 		reportLog = append(reportLog, "failed parsing body: "+err.Error())
-		logger.Error(ctx, err)
-		return apiReport, err
+		return report.NewError(name, reportLog), err
 	}
 
 	var reportState report.ReportState
@@ -61,13 +61,14 @@ func WriteTextReport(name string) (report.ApiReport, error) {
 		reportState = report.Fail
 	}
 
-	apiReport = report.ApiReport{
+	later := time.Now().UTC()
+	apiReport := report.ApiReport{
 		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
 		ReportState:  reportState,
 		Report:       strings.Join(reportLog[:], "\n"),
 		CreatedAtSec: now.Unix(),
 	}
 
-	logger.Info(ctx, "ran", name, fmt.Sprintf("%+v", apiReport))
+	logger.Info(ctx, "ran", name)
 	return apiReport, err
 }
