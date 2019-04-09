@@ -53,19 +53,22 @@ func periodicReport(name string, duration time.Duration, fn func(string) (report
 	}
 }
 
-func launch(ctx context.Context) {
-	var waitgroup sync.WaitGroup
-	var curr = 0
-	for runnerName, fn := range status.APIReportCatalog {
-		waitgroup.Add(1)
+func launchImpl(ctx context.Context, wg *sync.WaitGroup, runnerName string, reportNumber int) {
+	defer wg.Done()
+	logger.Info(ctx, "initial runner delay", runnerName)
+	delay(time.Second * time.Duration(reportNumber%60))
+	logger.Info(ctx, "loading runner", runnerName)
+	periodicReport(runnerName, time.Duration(60*time.Second), status.APIReportCatalog[runnerName])
+}
 
-		go func(wg *sync.WaitGroup, i int) {
-			defer wg.Done()
-			logger.Info(ctx, "initial runner delay", runnerName)
-			delay(time.Second * time.Duration(i%60))
-			logger.Info(ctx, "loading runner", runnerName)
-			periodicReport(runnerName, time.Duration(60*time.Second), fn)
-		}(&waitgroup, curr)
+// https://play.golang.org/p/u2s7gNZvMOG
+func launch(ctx context.Context) {
+	var wg sync.WaitGroup
+	var curr = 0
+	for runnerName := range status.APIReportCatalog {
+		wg.Add(1)
+
+		go launchImpl(ctx, &wg, runnerName, curr)
 
 		curr = curr + 1
 	}
@@ -74,5 +77,5 @@ func launch(ctx context.Context) {
 
 	// block so we do not exit
 	// we dont expect the routines to complete
-	waitgroup.Wait()
+	wg.Wait()
 }
