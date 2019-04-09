@@ -37,16 +37,26 @@ func WriteFileReport(name string) (report.ApiReport, error) {
 		reportLog = append(reportLog, "failed creating temp file: "+err.Error())
 		logger.Error(ctx, err)
 		return apiReport, err
+	} else {
+		defer func() {
+			if err := os.Remove(tmpFile.Name()); err != nil {
+				logger.Error(ctx, "failed to remove temp file", err)
+			}
+		}()
 	}
-	defer os.Remove(tmpFile.Name())
 
-	resp, err := uploadFile("https://file.io", tmpFile.Name())
+	resp, err := uploadFile(ctx, "https://file.io", tmpFile.Name())
 	if err != nil {
 		reportLog = append(reportLog, "starting failed: "+err.Error())
 		logger.Error(ctx, err)
 		return apiReport, err
+	} else {
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				logger.Error(ctx, "failed to remove temp file", err)
+			}
+		}()
 	}
-	defer resp.Body.Close()
 
 	later := time.Now().UTC()
 
@@ -86,7 +96,7 @@ func WriteFileReport(name string) (report.ApiReport, error) {
 	return apiReport, nil
 }
 
-func uploadFile(postURL string, filename string) (*http.Response, error) {
+func uploadFile(ctx context.Context, postURL string, filename string) (*http.Response, error) {
 	bodyBuf := &bytes.Buffer{}
 	bodyWriter := multipart.NewWriter(bodyBuf)
 
@@ -99,8 +109,13 @@ func uploadFile(postURL string, filename string) (*http.Response, error) {
 	fh, err := os.Open(filename)
 	if err != nil {
 		return nil, err
+	} else {
+		defer func() {
+			if err := fh.Close(); err != nil {
+				logger.Error(ctx, "failed to open file", filename, err)
+			}
+		}()
 	}
-	defer fh.Close()
 
 	//iocopy
 	_, err = io.Copy(fileWriter, fh)
@@ -109,7 +124,9 @@ func uploadFile(postURL string, filename string) (*http.Response, error) {
 	}
 
 	contentType := bodyWriter.FormDataContentType()
-	bodyWriter.Close()
+	if err := bodyWriter.Close(); err != nil {
+		logger.Error(ctx, "failed to close upload writer", err)
+	}
 
 	return http.Post(postURL, contentType, bodyBuf)
 }
