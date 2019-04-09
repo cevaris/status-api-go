@@ -5,12 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/cevaris/timber"
 )
-
-// Log is a logger for all report runners
-var Log = timber.NewOpLogger("report-runnner")
 
 // ReportState state of the report
 type ReportState int

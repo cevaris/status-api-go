@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/cevaris/status/logging"
 	"math/rand"
 	"os"
 	"sync"
@@ -9,15 +10,14 @@ import (
 
 	"github.com/cevaris/status/report"
 
-	"github.com/cevaris/status"
-	"github.com/cevaris/timber"
-
 	"cloud.google.com/go/datastore"
+	"github.com/cevaris/status"
 )
 
 var projectID string
 var dsClient *datastore.Client
-var logger = timber.NewOpLogger("runner")
+
+var logger = logging.Logger()
 
 func main() {
 	rand.Seed(time.Now().UnixNano())

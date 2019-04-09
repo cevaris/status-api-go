@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/cevaris/timber"
+	"github.com/cevaris/status/logging"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -19,7 +19,8 @@ import (
 
 // WriteFileReport reports on writing a message to https://www.file.io
 func WriteFileReport(name string) (report.ApiReport, error) {
-	reportLogger := report.NewLogger(timber.NewOpLogger(name))
+	logger := logging.Logger()
+	reportLogger := report.NewLogger(logger)
 	ctx := context.Background()
 	now := time.Now().UTC()
 
@@ -55,7 +56,7 @@ func WriteFileReport(name string) (report.ApiReport, error) {
 		return report.NewError(name, reportLogger), err
 	}
 	reportLogger.Debug(ctx, fmt.Sprintf("response status: %d", resp.StatusCode))
-	reportLogger.Debug(ctx, fmt.Sprintf("response body: %s", body))
+	reportLogger.Debug(ctx, fmt.Sprintf("response body: %s", string(body)))
 
 	var writeText ResponseJSON
 	err = json.Unmarshal(body, &writeText)
