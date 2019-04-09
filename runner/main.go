@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/cevaris/status/logging"
 	"math/rand"
 	"os"
@@ -38,18 +40,32 @@ func delay(duration time.Duration) {
 	time.Sleep(duration)
 }
 
+func ignorePanic(ctx context.Context, name string, fn func(string) (report.ApiReport, error)) (apiReport report.ApiReport, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Error(ctx, "Recovered in f", name, r)
+			apiReport = report.NewError(name, report.NewLogger(logger))
+			err = errors.New(fmt.Sprintf("panic thrown in %s", name))
+			return
+		}
+	}()
+
+	return fn(name)
+}
+
 func periodicReport(name string, duration time.Duration, fn func(string) (report.ApiReport, error)) {
 	for ; true; <-time.Tick(duration) {
 		ctx := context.Background()
 		logger.Info(ctx, "launching runner", name)
-		apiReport, err := fn(name)
+		apiReport, err := ignorePanic(ctx, name, fn)
 		if err != nil {
-			logger.Error(ctx, "failed to run report", name, err, apiReport)
+			logger.Error(ctx, "FAILED report", name, err, apiReport)
 		} else {
-			logger.Info(ctx, "successful report", name, apiReport)
+			logger.Info(ctx, "SUCCESS report", name, apiReport)
 		}
 	}
 
+	// we want to know when report runners fail
 	panic("runner died :( " + name)
 }
 
