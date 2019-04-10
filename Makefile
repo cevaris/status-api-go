@@ -39,3 +39,12 @@ teardown:
 	gcloud config set compute/zone ${ZONE}
 	gcloud compute instances delete ${APPNAME_RUNNER}
 	gcloud beta emulators datastore env-unset
+
+
+encrypt-secrets:
+	gcloud kms encrypt \
+	  --location=global  \
+	  --keyring=status-api-key-ring \
+	  --key=status-api-secrets \
+	  --plaintext-file=/git/secrets/status-api/secrets.json \
+	  --ciphertext-file=secrets/data.enc

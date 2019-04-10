@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cevaris/status/logging"
+	"github.com/cevaris/status/secrets"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -23,6 +24,9 @@ func WriteFileReport(name string) (report.ApiReport, error) {
 	reportLogger := report.NewLogger(logger)
 	ctx := context.Background()
 	now := time.Now().UTC()
+
+	apiKey := secrets.ReadOnlyApiKeys
+	logger.Info(ctx, apiKey)
 
 	reportLogger.Debug(ctx, "starting test")
 
