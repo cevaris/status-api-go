@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cevaris/status/logging"
-	"github.com/cevaris/status/secrets"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -25,13 +24,10 @@ func WriteFileReport(name string) (report.ApiReport, error) {
 	ctx := context.Background()
 	now := time.Now().UTC()
 
-	apiKey := secrets.ReadOnlyApiKeys
-	logger.Info(ctx, apiKey)
-
 	reportLogger.Debug(ctx, "starting test")
 
 	msg := fmt.Sprintf("secret number %d", now.Unix())
-	tmpFile, err := createTmpFile(msg)
+	tmpFile, err := report.CreateTmpFile(msg)
 	if err != nil {
 		reportLogger.Error(ctx, "failed creating temp file: "+err.Error())
 		return report.NewError(name, reportLogger), err
@@ -123,24 +119,4 @@ func uploadFile(ctx context.Context, postURL string, filename string) (*http.Res
 	}
 
 	return http.Post(postURL, contentType, bodyBuf)
-}
-
-func createTmpFile(msg string) (*os.File, error) {
-	tmpFile, err := ioutil.TempFile(os.TempDir(), "runner-")
-	if err != nil {
-		return nil, err
-	}
-
-	// Example writing to the file
-	text := []byte(msg)
-	if _, err = tmpFile.Write(text); err != nil {
-		return nil, err
-	}
-
-	// Close the file
-	if err := tmpFile.Close(); err != nil {
-		return nil, err
-	}
-
-	return tmpFile, nil
 }

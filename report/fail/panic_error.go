@@ -6,6 +6,7 @@ import (
 	"github.com/cevaris/status/report"
 )
 
+// PanicReport throws panic intentionally to confirm we do not crash the runner/scheduler
 func PanicReport(name string) (report.ApiReport, error) {
 	logger := logging.Logger()
 	reportLogger := report.NewLogger(logger)

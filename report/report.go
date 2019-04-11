@@ -2,7 +2,9 @@ package report
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -67,4 +69,27 @@ func NewError(name string, reportLogger *Logger) ApiReport {
 		Report:       strings.Join(reportLogger.Collect()[:], "\n"),
 		CreatedAtSec: NowUTCMinute().Unix(),
 	}
+}
+
+func CreateEmptyTmpFile() (*os.File, error) {
+	return ioutil.TempFile(os.TempDir(), "runner-")
+}
+
+func CreateTmpFile(msg string) (*os.File, error) {
+	tmpFile, err := CreateEmptyTmpFile()
+	if err != nil {
+		return nil, err
+	}
+	// Example writing to the file
+	text := []byte(msg)
+	if _, err = tmpFile.Write(text); err != nil {
+		return nil, err
+	}
+
+	// Close the file
+	if err := tmpFile.Close(); err != nil {
+		return nil, err
+	}
+
+	return tmpFile, nil
 }
