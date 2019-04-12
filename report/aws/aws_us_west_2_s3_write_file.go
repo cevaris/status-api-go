@@ -12,7 +12,6 @@ import (
 	"github.com/cevaris/status/report"
 	"github.com/cevaris/status/secrets"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -75,7 +74,7 @@ func AwsUsWest2S3WriteFile(name string) (report.ApiReport, error) {
 		Name:         name,
 		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
 		ReportState:  report.Pass,
-		Report:       strings.Join(reportLogger.Collect()[:], "\n"),
+		Report:       reportLogger.Collect(),
 		CreatedAtSec: report.NowUTCMinute().Unix(),
 	}
 

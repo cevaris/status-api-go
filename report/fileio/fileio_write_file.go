@@ -11,7 +11,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/cevaris/status/report"
@@ -65,7 +64,7 @@ func WriteFileReport(name string) (report.ApiReport, error) {
 		return report.NewError(name, reportLogger), err
 	}
 
-	var reportState report.ReportState
+	var reportState report.State
 	if resp.StatusCode == http.StatusOK && writeText.Success {
 		reportState = report.Pass
 	} else if resp.StatusCode == http.StatusBadRequest {
@@ -79,7 +78,7 @@ func WriteFileReport(name string) (report.ApiReport, error) {
 		Name:         name,
 		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
 		ReportState:  reportState,
-		Report:       strings.Join(reportLogger.Collect()[:], "\n"),
+		Report:       reportLogger.Collect(),
 		CreatedAtSec: report.NowUTCMinute().Unix(),
 	}
 

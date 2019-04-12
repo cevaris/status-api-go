@@ -32,8 +32,8 @@ func (l *Logger) Debug(ctx context.Context, m ...interface{}) {
 }
 
 // Returns collected logs
-func (l *Logger) Collect() []string {
-	return l.logs
+func (l *Logger) Collect() string {
+	return strings.Join(l.logs[:], "\n")
 }
 
 func appendEntries(l *Logger, m []interface{}) {

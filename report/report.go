@@ -1,6 +1,7 @@
 package report
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -9,22 +10,34 @@ import (
 	"time"
 )
 
-// ReportState state of the report
-type ReportState int
+// State state of the report
+type State int
 
 const (
-	Pass         ReportState = 0
-	Fail         ReportState = 1
-	Inconclusive ReportState = 2
+	Pass             State = 0
+	Fail             State = 1
+	Inconclusive     State = 2
+	MaxRunnerTimeout       = 50 * time.Second
 )
 
 // ApiReport is written to disk
 type ApiReport struct {
-	Name         string
-	LatencyMS    int64
-	ReportState  ReportState
-	Report       string
 	CreatedAtSec int64
+	LatencyMS    int64
+	Name         string
+	Report       string
+	ReportState  State
+}
+
+func NewReport(name string) ApiReport {
+	return ApiReport{
+		Name:         name,
+		CreatedAtSec: NowUTCMinute().Unix(),
+	}
+}
+
+func NewContext() (context.Context, func()) {
+	return context.WithTimeout(context.Background(), MaxRunnerTimeout)
 }
 
 // NowMinute returns now, truncated down to the minute. Useful for timestamping with minute grainularity.
@@ -66,7 +79,7 @@ func NewError(name string, reportLogger *Logger) ApiReport {
 		Name:         name,
 		LatencyMS:    0,
 		ReportState:  Fail,
-		Report:       strings.Join(reportLogger.Collect()[:], "\n"),
+		Report:       reportLogger.Collect(),
 		CreatedAtSec: NowUTCMinute().Unix(),
 	}
 }
