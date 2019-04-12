@@ -1,7 +1,6 @@
 package report
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -14,10 +13,10 @@ import (
 type State int
 
 const (
-	Pass             State = 0
-	Fail             State = 1
-	Inconclusive     State = 2
-	MaxRunnerTimeout       = 50 * time.Second
+	Pass               State = 0
+	Fail               State = 1
+	Inconclusive       State = 2
+	RunnerTotalTimeout       = 5 * time.Second
 )
 
 // ApiReport is written to disk
@@ -27,17 +26,6 @@ type ApiReport struct {
 	Name         string
 	Report       string
 	ReportState  State
-}
-
-func NewReport(name string) ApiReport {
-	return ApiReport{
-		Name:         name,
-		CreatedAtSec: NowUTCMinute().Unix(),
-	}
-}
-
-func NewContext() (context.Context, func()) {
-	return context.WithTimeout(context.Background(), MaxRunnerTimeout)
 }
 
 // NowMinute returns now, truncated down to the minute. Useful for timestamping with minute grainularity.

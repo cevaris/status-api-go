@@ -40,41 +40,68 @@ func delay(duration time.Duration) {
 	time.Sleep(duration)
 }
 
-func ignorePanic(ctx context.Context, name string, fn func(string) (report.ApiReport, error)) (apiReport report.ApiReport, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Error(ctx, "Recovered in f", name, r)
-			apiReport = report.NewError(name, report.NewLogger(logger))
-			err = errors.New(fmt.Sprintf("panic thrown in %s", name))
-			return
-		}
-	}()
-
-	return fn(name)
+type ChApiReport struct {
+	apiReport report.ApiReport
+	err       error
 }
 
-func periodicReport(name string, duration time.Duration, fn func(string) (report.ApiReport, error)) {
+// launchRunner executes the report runner while handling timeouts and panics
+func launchRunner(ctx context.Context, name string, fn func(context.Context, string) (report.ApiReport, error)) (apiReport report.ApiReport, err error) {
+	chApiReport := make(chan ChApiReport, 1)
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error(ctx, "Recovered in f", name, r)
+				chApiReport <- ChApiReport{
+					apiReport: report.NewError(name, report.NewLogger(logger)),
+					err:       errors.New(fmt.Sprintf("panic thrown in %s", name)),
+				}
+			}
+		}()
+
+		apiReport, err := fn(ctx, name)
+		chApiReport <- ChApiReport{apiReport, err}
+	}()
+
+	select {
+	case chApiReport := <-chApiReport:
+		return chApiReport.apiReport, chApiReport.err
+	case <-ctx.Done():
+		logger.Info(ctx, name, "timed out")
+
+		return report.NewError(name, report.NewLogger(logger)), ctx.Err()
+	}
+}
+
+func launchScheduler(ctx context.Context, wg *sync.WaitGroup, name string, reportNumber int) {
+	defer wg.Done()
+	logger.Info(ctx, "initial runner delay", name)
+	delay(time.Second * time.Duration(reportNumber%60))
+	logger.Info(ctx, "loading runner", name)
+
+	duration := time.Duration(60 * time.Second)
 	for ; true; <-time.Tick(duration) {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), report.RunnerTotalTimeout)
 		logger.Info(ctx, "launching runner", name)
-		apiReport, err := ignorePanic(ctx, name, fn)
+
+		apiReport, err := launchRunner(ctx, name, status.APIReportCatalog[name])
 		if err != nil {
-			logger.Error(ctx, "FAILED report", name, err, apiReport)
+			if err == context.DeadlineExceeded {
+				logger.Error(ctx, "FAILED TIMEOUT report", name, err, apiReport)
+			} else {
+				logger.Error(ctx, "FAILED report", name, err, apiReport)
+			}
 		} else {
 			logger.Info(ctx, "SUCCESS report", name, apiReport)
 		}
+
+		// manually defer is fine, as reports "should" always finish executing
+		cancel()
 	}
 
 	// we want to know when report runners fail
 	panic("runner died :( " + name)
-}
-
-func launchImpl(ctx context.Context, wg *sync.WaitGroup, runnerName string, reportNumber int) {
-	defer wg.Done()
-	logger.Info(ctx, "initial runner delay", runnerName)
-	delay(time.Second * time.Duration(reportNumber%60))
-	logger.Info(ctx, "loading runner", runnerName)
-	periodicReport(runnerName, time.Duration(60*time.Second), status.APIReportCatalog[runnerName])
 }
 
 // https://play.golang.org/p/u2s7gNZvMOG
@@ -84,7 +111,7 @@ func launch(ctx context.Context) {
 	for runnerName := range status.APIReportCatalog {
 		wg.Add(1)
 
-		go launchImpl(ctx, &wg, runnerName, curr)
+		go launchScheduler(ctx, &wg, runnerName, curr)
 
 		curr = curr + 1
 	}

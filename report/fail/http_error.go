@@ -7,10 +7,9 @@ import (
 	"net/http"
 )
 
-func HTTPErrorReport(name string) (report.ApiReport, error) {
+func HTTPErrorReport(ctx context.Context, name string) (report.ApiReport, error) {
 	logger := logging.Logger()
 	reportLogger := report.NewLogger(logger)
-	ctx := context.Background()
 
 	reportLogger.Debug(ctx,"starting", name)
 

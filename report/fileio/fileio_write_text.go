@@ -14,10 +14,10 @@ import (
 )
 
 // WriteTextReport reports on writing a message to https://www.file.io
-func WriteTextReport(name string) (report.ApiReport, error) {
+func WriteTextReport(ctx context.Context, name string) (report.ApiReport, error) {
 	logger := logging.Logger()
 	reportLogger := report.NewLogger(logger)
-	ctx := context.Background()
+
 	reportLogger.Debug(ctx, "starting test:", name)
 
 	data := url.Values{}

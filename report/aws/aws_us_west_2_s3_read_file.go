@@ -16,10 +16,9 @@ import (
 
 
 // AwsUsWest2S3ReadFile downloads a existing file from S3
-func AwsUsWest2S3ReadFile(name string) (report.ApiReport, error) {
+func AwsUsWest2S3ReadFile(ctx context.Context, name string) (report.ApiReport, error) {
 	logger := logging.Logger()
 	reportLogger := report.NewLogger(logger)
-	ctx := context.Background()
 	now := time.Now().UTC()
 
 	apiKeys := secrets.ReadOnlyApiKeys

@@ -17,10 +17,9 @@ import (
 )
 
 // WriteFileReport reports on writing a message to https://www.file.io
-func WriteFileReport(name string) (report.ApiReport, error) {
+func WriteFileReport(ctx context.Context, name string) (report.ApiReport, error) {
 	logger := logging.Logger()
 	reportLogger := report.NewLogger(logger)
-	ctx := context.Background()
 	now := time.Now().UTC()
 
 	reportLogger.Debug(ctx, "starting test")

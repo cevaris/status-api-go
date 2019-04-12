@@ -18,10 +18,9 @@ import (
 
 // AwsUsWest2S3WriteFile writes new file to S3
 // https://gist.github.com/CarterTsai/47f732121b34399d13fbd5765b3e11ed
-func AwsUsWest2S3WriteFile(name string) (report.ApiReport, error) {
+func AwsUsWest2S3WriteFile(ctx context.Context, name string) (report.ApiReport, error) {
 	logger := logging.Logger()
 	reportLogger := report.NewLogger(logger)
-	ctx := context.Background()
 	now := time.Now().UTC()
 
 	apiKeys := secrets.ReadOnlyApiKeys

@@ -7,10 +7,9 @@ import (
 )
 
 // PanicReport throws panic intentionally to confirm we do not crash the runner/scheduler
-func PanicReport(name string) (report.ApiReport, error) {
+func PanicReport(ctx context.Context, name string) (report.ApiReport, error) {
 	logger := logging.Logger()
 	reportLogger := report.NewLogger(logger)
-	ctx := context.Background()
 
 	reportLogger.Debug(ctx,"starting", name)
 
