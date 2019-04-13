@@ -15,7 +15,7 @@ import (
 
 // WriteTextReport reports on writing a message to https://www.file.io
 func WriteTextReport(ctx context.Context, name string) (report.ApiReport, error) {
-	logger := logging.Logger()
+	logger := logging.FileLogger(name)
 	reportLogger := report.NewLogger(logger)
 
 	reportLogger.Debug(ctx, "starting test:", name)
