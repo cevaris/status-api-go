@@ -20,7 +20,7 @@ func FileLogger(name string) timber.Logger {
 	if v, ok := _logMap.Load(name); ok {
 		log = v.(timber.Logger)
 	} else {
-		log = timber.NewOpFileLogger(name)
+		log = timber.NewGoFileLogger(name)
 		_logMap.Store(name, log)
 	}
 

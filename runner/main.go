@@ -19,7 +19,7 @@ import (
 var projectID string
 var dsClient *datastore.Client
 
-var logger = logging.Logger()
+var logger = logging.FileLogger("runner")
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
