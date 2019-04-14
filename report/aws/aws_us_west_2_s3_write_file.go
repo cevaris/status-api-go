@@ -63,7 +63,7 @@ func AwsUsWest2S3WriteFile(ctx context.Context, r report.Request) (report.ApiRep
 		return report.NewApiReportErr(r), err
 	}
 
-	reportLogger.Info(ctx, fmt.Sprintf("file uploaded to, %s\n", result.Location))
+	reportLogger.Info(ctx, fmt.Sprintf("file uploaded to, %s", result.Location))
 
 	later := time.Now().UTC()
 	apiReport := report.ApiReport{

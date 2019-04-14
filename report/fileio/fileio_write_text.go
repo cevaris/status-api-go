@@ -64,7 +64,7 @@ func WriteTextReport(ctx context.Context, r report.Request) (report.ApiReport, e
 		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
 		ReportState:  reportState,
 		Report:       reportLogger.Collect(),
-		CreatedAtSec: now.Unix(),
+		CreatedAtSec: report.NowUTCMinute().Unix(),
 	}
 
 	reportLogger.Info(ctx, "ran", r.Name)

@@ -41,6 +41,7 @@ func (l *Logger) Debug(ctx context.Context, m ...interface{}) {
 func (l *Logger) Collect() []byte {
 	if err := l.writer.Flush(); err != nil {
 		fmt.Println("report buff logger failed to flush")
+		return nil
 	}
 	return l.buffer.Bytes()
 }

@@ -24,7 +24,7 @@ const (
 var projectID string
 var dsClient *datastore.Client
 
-var logger = logging.FileLogger("runner")
+var logger = logging.CachedLogger("runner", true)
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
@@ -81,10 +81,12 @@ func launchRunner(ctx context.Context, r report.Request, fn func(context.Context
 func launchScheduler(ctx context.Context, wg *sync.WaitGroup, reportName string, reportNumber int) {
 	defer wg.Done()
 	logger.Info(ctx, "initial runner delay", reportName)
-	delay(time.Second * time.Duration(reportNumber%60))
+	// mod 55 as we dont want jobs running at the last 5 seconds,
+	// as it could overwrite the future minute's report if the job finishes near 60th second.
+	delay(time.Second * time.Duration(reportNumber%55))
 	logger.Info(ctx, "loading runner", reportName)
 
-	localLogger := logging.FileLogger(reportName)
+	localLogger := logging.CachedLogger(reportName, false)
 
 	duration := time.Duration(60 * time.Second)
 	for ; true; <-time.Tick(duration) {
@@ -96,15 +98,7 @@ func launchScheduler(ctx context.Context, wg *sync.WaitGroup, reportName string,
 		reportLogger.Info(ctx, "launching runner", reportName)
 
 		apiReport, err := launchRunner(ctx, request, status.APIReportCatalog[reportName])
-		if err != nil {
-			if err == context.DeadlineExceeded {
-				reportLogger.Error(ctx, "FAILED TIMEOUT report", reportName, err, apiReport)
-			} else {
-				reportLogger.Error(ctx, "FAILED report", reportName, err, apiReport)
-			}
-		} else {
-			reportLogger.Info(ctx, "SUCCESS report", reportName, apiReport)
-		}
+		writeReport(ctx, request, apiReport, err)
 
 		// manually defer is fine, as reports "should" always finish executing
 		cancel()
@@ -112,6 +106,26 @@ func launchScheduler(ctx context.Context, wg *sync.WaitGroup, reportName string,
 
 	// we want to know when report runners fail
 	panic("runner died :( " + reportName)
+}
+
+func writeReport(ctx context.Context, r report.Request, apiReport report.ApiReport, err error) {
+	reportLogger := r.ReportLogger
+
+	reportLogger.Info(ctx, "report.createdAt.sec", apiReport.CreatedAtSec)
+	reportLogger.Info(ctx, "report.latency.ms", apiReport.LatencyMS)
+	reportLogger.Info(ctx, "report.name", apiReport.Name)
+
+	if err != nil {
+		if err == context.DeadlineExceeded {
+			reportLogger.Error(ctx, "report.state", apiReport.ReportState, "TIMEOUT")
+		} else {
+			reportLogger.Error(ctx, "report.state", apiReport.ReportState, err)
+		}
+	} else {
+		reportLogger.Error(ctx, "report.state", apiReport.ReportState)
+	}
+
+	//logger.Info(ctx, "report.log", len(reportLogger.Collect()), "bytes")
 }
 
 // https://play.golang.org/p/u2s7gNZvMOG

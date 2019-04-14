@@ -12,14 +12,14 @@ func Logger() timber.Logger {
 	return logger
 }
 
-// FileLogger caches file based loggers
-func FileLogger(name string) timber.Logger {
+// CachedLogger caches file based loggers
+func CachedLogger(name string, stdout bool) timber.Logger {
 	var log timber.Logger
 
 	if v, ok := logMap[name]; ok {
 		log = v
 	} else {
-		log = timber.NewGoFileLogger(name)
+		log = timber.NewGoFileLogger(name, stdout)
 		logMap[name] = log
 	}
 
