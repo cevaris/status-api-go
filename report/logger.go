@@ -1,47 +1,46 @@
 package report
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/cevaris/timber"
-	"strings"
 )
 
 func NewLogger(logger timber.Logger) *Logger {
-	return &Logger{underlying: logger, logs: make([]string, 0)}
+	buffer := bytes.NewBuffer(make([]byte, 0))
+	writer := bufio.NewWriter(buffer)
+	bufferLogger := timber.NewGoBufferLogger(writer)
+	return &Logger{logger: logger, reportLogger: bufferLogger, buffer: buffer, writer: writer}
 }
 
 type Logger struct {
-	underlying timber.Logger
-	logs       []string
+	logger       timber.Logger // regular user defined
+	reportLogger timber.Logger // logger that writes to buffer
+	buffer       *bytes.Buffer // report data
+	writer       *bufio.Writer // log writer ref, needed for flushing
 }
 
 func (l *Logger) Info(ctx context.Context, m ...interface{}) {
-	appendEntries(l, m)
-	l.underlying.Info(ctx, m...)
+	l.logger.Info(ctx, m...)
+	l.reportLogger.Info(ctx, m...)
 }
 
 func (l *Logger) Error(ctx context.Context, m ...interface{}) {
-	appendEntries(l, m)
-	l.underlying.Error(ctx, m...)
+	l.logger.Error(ctx, m...)
+	l.reportLogger.Error(ctx, m...)
 }
 
 func (l *Logger) Debug(ctx context.Context, m ...interface{}) {
-	appendEntries(l, m)
-	l.underlying.Debug(ctx, m...)
+	l.logger.Debug(ctx, m...)
+	l.reportLogger.Debug(ctx, m...)
 }
 
 // Returns collected logs
-func (l *Logger) Collect() string {
-	return strings.Join(l.logs[:], "\n")
-}
-
-func appendEntries(l *Logger, m []interface{}) {
-	// convert message params to strings
-	line := make([]string, len(m))
-	for _, a := range m {
-		line = append(line, fmt.Sprintf("%+v", a))
+func (l *Logger) Collect() []byte {
+	if err := l.writer.Flush(); err != nil {
+		fmt.Println("report buff logger failed to flush")
 	}
-	// add as a single line entry
-	l.logs = append(l.logs, strings.Join(line[:], " "))
+	return l.buffer.Bytes()
 }

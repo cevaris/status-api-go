@@ -24,7 +24,7 @@ type ApiReport struct {
 	CreatedAtSec int64
 	LatencyMS    int64
 	Name         string
-	Report       string
+	Report       []byte
 	ReportState  State
 }
 
