@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/cevaris/status/logging"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -14,22 +13,20 @@ import (
 )
 
 // WriteTextReport reports on writing a message to https://www.file.io
-func WriteTextReport(ctx context.Context, name string) (report.ApiReport, error) {
-	logger := logging.FileLogger(name)
-	reportLogger := report.NewLogger(logger)
+func WriteTextReport(ctx context.Context, r *report.Request) (report.ApiReport, error) {
+	reportLogger := r.ReportLogger
 
-	reportLogger.Debug(ctx, "starting test:", name)
+	reportLogger.Debug(ctx, "starting test:", r.Name)
 
 	data := url.Values{}
 	data.Add("text", fmt.Sprintf("secret number %d", time.Now().UTC().Unix()))
 	reportLogger.Debug(ctx, "posting: ", data)
 
-
 	now := time.Now().UTC()
 	resp, err := http.PostForm("https://file.io", data)
 	if err != nil {
 		reportLogger.Error(ctx, "post failed: "+err.Error())
-		return report.NewError(name, reportLogger), err
+		return report.NewApiReportErr(r.Name, reportLogger), err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -41,7 +38,7 @@ func WriteTextReport(ctx context.Context, name string) (report.ApiReport, error)
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		reportLogger.Error(ctx, "failed reading response body: "+err.Error())
-		return report.NewError(name, reportLogger), err
+		return report.NewApiReportErr(r.Name, reportLogger), err
 	}
 	reportLogger.Debug(ctx, fmt.Sprintf("response status: %d", resp.StatusCode))
 	reportLogger.Debug(ctx, fmt.Sprintf("response body: %s", string(body)))
@@ -50,7 +47,7 @@ func WriteTextReport(ctx context.Context, name string) (report.ApiReport, error)
 	err = json.Unmarshal(body, &writeFile)
 	if err != nil {
 		reportLogger.Error(ctx, "failed parsing body: "+err.Error())
-		return report.NewError(name, reportLogger), err
+		return report.NewApiReportErr(r.Name, reportLogger), err
 	}
 
 	var reportState report.State
@@ -62,15 +59,14 @@ func WriteTextReport(ctx context.Context, name string) (report.ApiReport, error)
 		reportState = report.Fail
 	}
 
-
 	apiReport := report.ApiReport{
-		Name:         name,
+		Name:         r.Name,
 		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
 		ReportState:  reportState,
 		Report:       reportLogger.Collect(),
 		CreatedAtSec: now.Unix(),
 	}
 
-	reportLogger.Info(ctx, "ran", name)
+	reportLogger.Info(ctx, "ran", r.Name)
 	return apiReport, err
 }

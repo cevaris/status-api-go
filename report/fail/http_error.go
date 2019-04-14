@@ -2,21 +2,19 @@ package fail
 
 import (
 	"context"
-	"github.com/cevaris/status/logging"
 	"github.com/cevaris/status/report"
 	"net/http"
 )
 
-func HTTPErrorReport(ctx context.Context, name string) (report.ApiReport, error) {
-	logger := logging.FileLogger(name)
-	reportLogger := report.NewLogger(logger)
+func HTTPErrorReport(ctx context.Context, r *report.Request) (report.ApiReport, error) {
+	reportLogger := r.ReportLogger
 
-	reportLogger.Debug(ctx,"starting", name)
+	reportLogger.Debug(ctx, "starting", r.Name)
 
 	_, err := http.Get("http://no-such-api.com")
 	if err != nil {
 		reportLogger.Error(ctx, "EXPECTED: failed to get", err)
-		return report.NewError(name, reportLogger), err
+		return report.NewApiReportErr(r.Name, reportLogger), err
 	}
 
 	var apiReport report.ApiReport

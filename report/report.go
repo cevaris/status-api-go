@@ -13,10 +13,10 @@ import (
 type State int
 
 const (
-	Pass               State = 0
-	Fail               State = 1
-	Inconclusive       State = 2
-	RunnerTotalTimeout       = 5 * time.Second
+	// States of which a report can result to
+	Pass         State = 0
+	Inconclusive State = 1
+	Fail         State = 2
 )
 
 // ApiReport is written to disk
@@ -62,7 +62,7 @@ func FmtHTTPRequest(r *http.Request) string {
 	return strings.Join(request, "\n")
 }
 
-func NewError(name string, reportLogger *Logger) ApiReport {
+func NewApiReportErr(name string, reportLogger *Logger) ApiReport {
 	return ApiReport{
 		Name:         name,
 		LatencyMS:    0,

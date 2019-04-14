@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/cevaris/status/logging"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -17,9 +16,8 @@ import (
 )
 
 // WriteFileReport reports on writing a message to https://www.file.io
-func WriteFileReport(ctx context.Context, name string) (report.ApiReport, error) {
-	logger := logging.FileLogger(name)
-	reportLogger := report.NewLogger(logger)
+func WriteFileReport(ctx context.Context, r *report.Request) (report.ApiReport, error) {
+	reportLogger := r.ReportLogger
 	now := time.Now().UTC()
 
 	reportLogger.Debug(ctx, "starting test")
@@ -28,7 +26,7 @@ func WriteFileReport(ctx context.Context, name string) (report.ApiReport, error)
 	tmpFile, err := report.CreateTmpFile(msg)
 	if err != nil {
 		reportLogger.Error(ctx, "failed creating temp file: "+err.Error())
-		return report.NewError(name, reportLogger), err
+		return report.NewApiReportErr(r.Name, reportLogger), err
 	}
 	defer func() {
 		if err := os.Remove(tmpFile.Name()); err != nil {
@@ -40,7 +38,7 @@ func WriteFileReport(ctx context.Context, name string) (report.ApiReport, error)
 	if err != nil {
 		reportLogger.Debug(ctx, "starting failed: "+err.Error())
 		reportLogger.Error(ctx, err)
-		return report.NewError(name, reportLogger), err
+		return report.NewApiReportErr(r.Name, reportLogger), err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -51,7 +49,7 @@ func WriteFileReport(ctx context.Context, name string) (report.ApiReport, error)
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		reportLogger.Error(ctx, err)
-		return report.NewError(name, reportLogger), err
+		return report.NewApiReportErr(r.Name, reportLogger), err
 	}
 	reportLogger.Debug(ctx, fmt.Sprintf("response status: %d", resp.StatusCode))
 	reportLogger.Debug(ctx, fmt.Sprintf("response body: %s", string(body)))
@@ -60,7 +58,7 @@ func WriteFileReport(ctx context.Context, name string) (report.ApiReport, error)
 	err = json.Unmarshal(body, &writeText)
 	if err != nil {
 		reportLogger.Debug(ctx, "failed parsing body: "+err.Error())
-		return report.NewError(name, reportLogger), err
+		return report.NewApiReportErr(r.Name, reportLogger), err
 	}
 
 	var reportState report.State
@@ -74,14 +72,14 @@ func WriteFileReport(ctx context.Context, name string) (report.ApiReport, error)
 
 	later := time.Now().UTC()
 	apiReport := report.ApiReport{
-		Name:         name,
+		Name:         r.Name,
 		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
 		ReportState:  reportState,
 		Report:       reportLogger.Collect(),
 		CreatedAtSec: report.NowUTCMinute().Unix(),
 	}
 
-	reportLogger.Info(ctx, "ran", name)
+	reportLogger.Info(ctx, "ran", r.Name)
 	return apiReport, nil
 }
 

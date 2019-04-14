@@ -2,16 +2,14 @@ package fail
 
 import (
 	"context"
-	"github.com/cevaris/status/logging"
 	"github.com/cevaris/status/report"
 	"time"
 )
 
-func TimeoutErrorReport(ctx context.Context, name string) (report.ApiReport, error) {
-	logger := logging.FileLogger(name)
-	reportLogger := report.NewLogger(logger)
+func TimeoutErrorReport(ctx context.Context, r *report.Request) (report.ApiReport, error) {
+	reportLogger := r.ReportLogger
 
-	reportLogger.Info(ctx, "starting", name)
+	reportLogger.Info(ctx, "starting", r.Name)
 	time.Sleep(1 * time.Hour)
 
 	// should force timeout of report run
