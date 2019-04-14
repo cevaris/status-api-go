@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func HTTPErrorReport(ctx context.Context, r *report.Request) (report.ApiReport, error) {
+func HTTPErrorReport(ctx context.Context, r report.Request) (report.ApiReport, error) {
 	reportLogger := r.ReportLogger
 
 	reportLogger.Debug(ctx, "starting", r.Name)

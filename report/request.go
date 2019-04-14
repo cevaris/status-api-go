@@ -10,10 +10,10 @@ type Request struct {
 	ReportLogger *Logger
 }
 
-func NewRequest(logger timber.Logger, name string) *Request {
+func NewRequest(logger timber.Logger, name string) Request {
 	reportLogger := NewLogger(logger)
 
-	return &Request{
+	return Request{
 		Name:         name,
 		Logger:       logger,
 		ReportLogger: reportLogger,

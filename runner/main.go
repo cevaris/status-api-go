@@ -24,7 +24,7 @@ const (
 var projectID string
 var dsClient *datastore.Client
 
-var runnerLoggger = logging.FileLogger("runner")
+var runnerLogger = logging.FileLogger("runner")
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
@@ -37,7 +37,7 @@ func main() {
 		panic(err)
 	}
 
-	runnerLoggger.Info(ctx, "starting runner...")
+	runnerLogger.Info(ctx, "starting runner...")
 	launch(ctx)
 }
 
@@ -51,13 +51,13 @@ type ChApiReport struct {
 }
 
 // launchRunner executes the report runner while handling timeouts and panics
-func launchRunner(ctx context.Context, r *report.Request, fn func(context.Context, *report.Request) (report.ApiReport, error)) (apiReport report.ApiReport, err error) {
+func launchRunner(ctx context.Context, r report.Request, fn func(context.Context, report.Request) (report.ApiReport, error)) (apiReport report.ApiReport, err error) {
 	chApiReport := make(chan ChApiReport, 1)
 
 	go func() {
 		defer func() {
 			if rec := recover(); rec != nil {
-				runnerLoggger.Error(ctx, "Recovered in f", r.Name, rec)
+				runnerLogger.Error(ctx, "Recovered in f", r.Name, rec)
 				chApiReport <- ChApiReport{
 					apiReport: report.NewApiReportErr(r.Name, r.ReportLogger),
 					err:       errors.New(fmt.Sprintf("panic thrown in %s", r.Name)),
@@ -73,7 +73,7 @@ func launchRunner(ctx context.Context, r *report.Request, fn func(context.Contex
 	case chApiReport := <-chApiReport:
 		return chApiReport.apiReport, chApiReport.err
 	case <-ctx.Done():
-		runnerLoggger.Info(ctx, r.Name, "timed out")
+		runnerLogger.Info(ctx, r.Name, "timed out")
 
 		return report.NewApiReportErr(r.Name, r.ReportLogger), ctx.Err()
 	}
@@ -81,9 +81,9 @@ func launchRunner(ctx context.Context, r *report.Request, fn func(context.Contex
 
 func launchScheduler(ctx context.Context, wg *sync.WaitGroup, name string, reportNumber int) {
 	defer wg.Done()
-	runnerLoggger.Info(ctx, "initial runner delay", name)
+	runnerLogger.Info(ctx, "initial runner delay", name)
 	delay(time.Second * time.Duration(reportNumber%60))
-	runnerLoggger.Info(ctx, "loading runner", name)
+	runnerLogger.Info(ctx, "loading runner", name)
 
 	logger := logging.FileLogger(name)
 
@@ -127,7 +127,7 @@ func launch(ctx context.Context) {
 		curr = curr + 1
 	}
 
-	runnerLoggger.Info(ctx, "started runners")
+	runnerLogger.Info(ctx, "started runners")
 
 	// block so we do not exit
 	// we dont expect the routines to complete

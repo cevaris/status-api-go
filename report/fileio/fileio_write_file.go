@@ -16,7 +16,7 @@ import (
 )
 
 // WriteFileReport reports on writing a message to https://www.file.io
-func WriteFileReport(ctx context.Context, r *report.Request) (report.ApiReport, error) {
+func WriteFileReport(ctx context.Context, r report.Request) (report.ApiReport, error) {
 	reportLogger := r.ReportLogger
 	now := time.Now().UTC()
 

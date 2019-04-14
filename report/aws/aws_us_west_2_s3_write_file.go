@@ -16,7 +16,7 @@ import (
 
 // AwsUsWest2S3WriteFile writes new file to S3
 // https://gist.github.com/CarterTsai/47f732121b34399d13fbd5765b3e11ed
-func AwsUsWest2S3WriteFile(ctx context.Context, r *report.Request) (report.ApiReport, error) {
+func AwsUsWest2S3WriteFile(ctx context.Context, r report.Request) (report.ApiReport, error) {
 	reportLogger := r.ReportLogger
 	now := time.Now().UTC()
 

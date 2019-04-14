@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func TimeoutErrorReport(ctx context.Context, r *report.Request) (report.ApiReport, error) {
+func TimeoutErrorReport(ctx context.Context, r report.Request) (report.ApiReport, error) {
 	reportLogger := r.ReportLogger
 
 	reportLogger.Info(ctx, "starting", r.Name)
