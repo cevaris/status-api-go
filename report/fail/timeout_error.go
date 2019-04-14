@@ -8,7 +8,7 @@ import (
 )
 
 func TimeoutErrorReport(ctx context.Context, name string) (report.ApiReport, error) {
-	logger := logging.Logger()
+	logger := logging.FileLogger(name)
 	reportLogger := report.NewLogger(logger)
 
 	reportLogger.Info(ctx, "starting", name)

@@ -18,7 +18,7 @@ import (
 
 // WriteFileReport reports on writing a message to https://www.file.io
 func WriteFileReport(ctx context.Context, name string) (report.ApiReport, error) {
-	logger := logging.Logger()
+	logger := logging.FileLogger(name)
 	reportLogger := report.NewLogger(logger)
 	now := time.Now().UTC()
 

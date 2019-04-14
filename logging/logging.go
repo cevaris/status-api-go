@@ -1,9 +1,28 @@
 package logging
 
-import "github.com/cevaris/timber"
+import (
+	"github.com/cevaris/timber"
+	"sync"
+)
 
-var logger = timber.NewOpLogger("status")
+var _logger = timber.NewOpLogger("status")
+var _logMap sync.Map
 
-func Logger() timber.Logger {
-	return logger
+// STDOUT caches file based logger
+func Logger() timber.Logger{
+	return _logger
+}
+
+// FileLogger caches file based loggers
+func FileLogger(name string) timber.Logger {
+	var log timber.Logger
+
+	if v, ok := _logMap.Load(name); ok {
+		log = v.(timber.Logger)
+	} else {
+		log = timber.NewGoFileLogger(name)
+		_logMap.Store(name, log)
+	}
+
+	return log
 }
