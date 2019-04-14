@@ -24,7 +24,7 @@ const (
 var projectID string
 var dsClient *datastore.Client
 
-var runnerLogger = logging.FileLogger("runner")
+var logger = logging.FileLogger("runner")
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
@@ -37,7 +37,7 @@ func main() {
 		panic(err)
 	}
 
-	runnerLogger.Info(ctx, "starting runner...")
+	logger.Info(ctx, "starting runner...")
 	launch(ctx)
 }
 
@@ -57,9 +57,9 @@ func launchRunner(ctx context.Context, r report.Request, fn func(context.Context
 	go func() {
 		defer func() {
 			if rec := recover(); rec != nil {
-				runnerLogger.Error(ctx, "Recovered in f", r.Name, rec)
+				logger.Info(ctx, "Recovered in f", r.Name, rec)
 				chApiReport <- ChApiReport{
-					apiReport: report.NewApiReportErr(r.Name, r.ReportLogger),
+					apiReport: report.NewApiReportErr(r),
 					err:       errors.New(fmt.Sprintf("panic thrown in %s", r.Name)),
 				}
 			}
@@ -73,38 +73,37 @@ func launchRunner(ctx context.Context, r report.Request, fn func(context.Context
 	case chApiReport := <-chApiReport:
 		return chApiReport.apiReport, chApiReport.err
 	case <-ctx.Done():
-		runnerLogger.Info(ctx, r.Name, "timed out")
-
-		return report.NewApiReportErr(r.Name, r.ReportLogger), ctx.Err()
+		logger.Info(ctx, r.Name, "timed out")
+		return report.NewApiReportErr(r), ctx.Err()
 	}
 }
 
-func launchScheduler(ctx context.Context, wg *sync.WaitGroup, name string, reportNumber int) {
+func launchScheduler(ctx context.Context, wg *sync.WaitGroup, reportName string, reportNumber int) {
 	defer wg.Done()
-	runnerLogger.Info(ctx, "initial runner delay", name)
+	logger.Info(ctx, "initial runner delay", reportName)
 	delay(time.Second * time.Duration(reportNumber%60))
-	runnerLogger.Info(ctx, "loading runner", name)
+	logger.Info(ctx, "loading runner", reportName)
 
-	logger := logging.FileLogger(name)
+	localLogger := logging.FileLogger(reportName)
 
 	duration := time.Duration(60 * time.Second)
 	for ; true; <-time.Tick(duration) {
 		ctx, cancel := context.WithTimeout(context.Background(), RunnerTotalTimeout)
 
-		request := report.NewRequest(logger, name)
+		request := report.NewRequest(localLogger, reportName)
 		reportLogger := request.ReportLogger
 
-		reportLogger.Info(ctx, "launching runner", name)
+		reportLogger.Info(ctx, "launching runner", reportName)
 
-		apiReport, err := launchRunner(ctx, request, status.APIReportCatalog[name])
+		apiReport, err := launchRunner(ctx, request, status.APIReportCatalog[reportName])
 		if err != nil {
 			if err == context.DeadlineExceeded {
-				reportLogger.Error(ctx, "FAILED TIMEOUT report", name, err, apiReport)
+				reportLogger.Error(ctx, "FAILED TIMEOUT report", reportName, err, apiReport)
 			} else {
-				reportLogger.Error(ctx, "FAILED report", name, err, apiReport)
+				reportLogger.Error(ctx, "FAILED report", reportName, err, apiReport)
 			}
 		} else {
-			reportLogger.Info(ctx, "SUCCESS report", name, apiReport)
+			reportLogger.Info(ctx, "SUCCESS report", reportName, apiReport)
 		}
 
 		// manually defer is fine, as reports "should" always finish executing
@@ -112,22 +111,22 @@ func launchScheduler(ctx context.Context, wg *sync.WaitGroup, name string, repor
 	}
 
 	// we want to know when report runners fail
-	panic("runner died :( " + name)
+	panic("runner died :( " + reportName)
 }
 
 // https://play.golang.org/p/u2s7gNZvMOG
 func launch(ctx context.Context) {
 	var wg sync.WaitGroup
 	var curr = 0
-	for runnerName := range status.APIReportCatalog {
+	for reportName := range status.APIReportCatalog {
 		wg.Add(1)
 
-		go launchScheduler(ctx, &wg, runnerName, curr)
+		go launchScheduler(ctx, &wg, reportName, curr)
 
 		curr = curr + 1
 	}
 
-	runnerLogger.Info(ctx, "started runners")
+	logger.Info(ctx, "started runners")
 
 	// block so we do not exit
 	// we dont expect the routines to complete

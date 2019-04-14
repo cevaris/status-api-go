@@ -62,12 +62,12 @@ func FmtHTTPRequest(r *http.Request) string {
 	return strings.Join(request, "\n")
 }
 
-func NewApiReportErr(name string, reportLogger *Logger) ApiReport {
+func NewApiReportErr(r Request) ApiReport {
 	return ApiReport{
-		Name:         name,
+		Name:         r.Name,
 		LatencyMS:    0,
 		ReportState:  Fail,
-		Report:       reportLogger.Collect(),
+		Report:       r.ReportLogger.Collect(),
 		CreatedAtSec: NowUTCMinute().Unix(),
 	}
 }

@@ -34,7 +34,7 @@ func AwsUsWest2S3WriteFile(ctx context.Context, r report.Request) (report.ApiRep
 	tmpFile, err := report.CreateTmpFile(msg)
 	if err != nil {
 		reportLogger.Error(ctx, "failed creating temp file: "+err.Error())
-		return report.NewApiReportErr(r.Name, reportLogger), err
+		return report.NewApiReportErr(r), err
 	}
 	defer func() {
 		if err := os.Remove(tmpFile.Name()); err != nil {
@@ -48,7 +48,7 @@ func AwsUsWest2S3WriteFile(ctx context.Context, r report.Request) (report.ApiRep
 	f, err := os.Open(tmpFile.Name())
 	if err != nil {
 		reportLogger.Error(ctx, fmt.Sprintf("failed to open file %q, %v", tmpFile.Name(), err))
-		return report.NewApiReportErr(r.Name, reportLogger), err
+		return report.NewApiReportErr(r), err
 	}
 
 	// Upload the file to S3.
@@ -60,7 +60,7 @@ func AwsUsWest2S3WriteFile(ctx context.Context, r report.Request) (report.ApiRep
 	})
 	if err != nil {
 		reportLogger.Error(ctx, fmt.Sprintf("failed to upload file, %v", err))
-		return report.NewApiReportErr(r.Name, reportLogger), err
+		return report.NewApiReportErr(r), err
 	}
 
 	reportLogger.Info(ctx, fmt.Sprintf("file uploaded to, %s\n", result.Location))

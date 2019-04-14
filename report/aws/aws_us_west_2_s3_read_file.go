@@ -32,7 +32,7 @@ func AwsUsWest2S3ReadFile(ctx context.Context, r report.Request) (report.ApiRepo
 	tmpFile, err := report.CreateEmptyTmpFile()
 	if err != nil {
 		reportLogger.Error(ctx, "failed creating temp file: "+err.Error())
-		return report.NewApiReportErr(r.Name, reportLogger), err
+		return report.NewApiReportErr(r), err
 	}
 	defer func() {
 		if err := os.Remove(tmpFile.Name()); err != nil {
@@ -50,7 +50,7 @@ func AwsUsWest2S3ReadFile(ctx context.Context, r report.Request) (report.ApiRepo
 	})
 	if err != nil {
 		reportLogger.Error(ctx, "failed to read file", err)
-		return report.NewApiReportErr(r.Name, reportLogger), err
+		return report.NewApiReportErr(r), err
 	}
 
 	reportLogger.Info(ctx, "file uploaded to ", tmpFile.Name(), "downloaded", bytes, "bytes")

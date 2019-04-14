@@ -26,7 +26,7 @@ func WriteTextReport(ctx context.Context, r report.Request) (report.ApiReport, e
 	resp, err := http.PostForm("https://file.io", data)
 	if err != nil {
 		reportLogger.Error(ctx, "post failed: "+err.Error())
-		return report.NewApiReportErr(r.Name, reportLogger), err
+		return report.NewApiReportErr(r), err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -38,7 +38,7 @@ func WriteTextReport(ctx context.Context, r report.Request) (report.ApiReport, e
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		reportLogger.Error(ctx, "failed reading response body: "+err.Error())
-		return report.NewApiReportErr(r.Name, reportLogger), err
+		return report.NewApiReportErr(r), err
 	}
 	reportLogger.Debug(ctx, fmt.Sprintf("response status: %d", resp.StatusCode))
 	reportLogger.Debug(ctx, fmt.Sprintf("response body: %s", string(body)))
@@ -47,7 +47,7 @@ func WriteTextReport(ctx context.Context, r report.Request) (report.ApiReport, e
 	err = json.Unmarshal(body, &writeFile)
 	if err != nil {
 		reportLogger.Error(ctx, "failed parsing body: "+err.Error())
-		return report.NewApiReportErr(r.Name, reportLogger), err
+		return report.NewApiReportErr(r), err
 	}
 
 	var reportState report.State

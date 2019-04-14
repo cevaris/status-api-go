@@ -14,7 +14,7 @@ func HTTPErrorReport(ctx context.Context, r report.Request) (report.ApiReport, e
 	_, err := http.Get("http://no-such-api.com")
 	if err != nil {
 		reportLogger.Error(ctx, "EXPECTED: failed to get", err)
-		return report.NewApiReportErr(r.Name, reportLogger), err
+		return report.NewApiReportErr(r), err
 	}
 
 	var apiReport report.ApiReport

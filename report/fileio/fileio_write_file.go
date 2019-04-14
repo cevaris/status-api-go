@@ -26,7 +26,7 @@ func WriteFileReport(ctx context.Context, r report.Request) (report.ApiReport, e
 	tmpFile, err := report.CreateTmpFile(msg)
 	if err != nil {
 		reportLogger.Error(ctx, "failed creating temp file: "+err.Error())
-		return report.NewApiReportErr(r.Name, reportLogger), err
+		return report.NewApiReportErr(r), err
 	}
 	defer func() {
 		if err := os.Remove(tmpFile.Name()); err != nil {
@@ -38,7 +38,7 @@ func WriteFileReport(ctx context.Context, r report.Request) (report.ApiReport, e
 	if err != nil {
 		reportLogger.Debug(ctx, "starting failed: "+err.Error())
 		reportLogger.Error(ctx, err)
-		return report.NewApiReportErr(r.Name, reportLogger), err
+		return report.NewApiReportErr(r), err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -49,7 +49,7 @@ func WriteFileReport(ctx context.Context, r report.Request) (report.ApiReport, e
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		reportLogger.Error(ctx, err)
-		return report.NewApiReportErr(r.Name, reportLogger), err
+		return report.NewApiReportErr(r), err
 	}
 	reportLogger.Debug(ctx, fmt.Sprintf("response status: %d", resp.StatusCode))
 	reportLogger.Debug(ctx, fmt.Sprintf("response body: %s", string(body)))
@@ -58,7 +58,7 @@ func WriteFileReport(ctx context.Context, r report.Request) (report.ApiReport, e
 	err = json.Unmarshal(body, &writeText)
 	if err != nil {
 		reportLogger.Debug(ctx, "failed parsing body: "+err.Error())
-		return report.NewApiReportErr(r.Name, reportLogger), err
+		return report.NewApiReportErr(r), err
 	}
 
 	var reportState report.State
