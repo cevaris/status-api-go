@@ -21,11 +21,11 @@ const (
 
 // ApiReport is written to disk
 type ApiReport struct {
-	CreatedAtSec int64
-	LatencyMS    int64
-	Name         string
-	Report       []byte
-	ReportState  State
+	CreatedAt   time.Time
+	Latency     time.Duration
+	Name        string
+	Report      []byte
+	ReportState State
 }
 
 // NowMinute returns now, truncated down to the minute. Useful for timestamping with minute grainularity.
@@ -64,11 +64,11 @@ func FmtHTTPRequest(r *http.Request) string {
 
 func NewApiReportErr(r Request) ApiReport {
 	return ApiReport{
-		Name:         r.Name,
-		LatencyMS:    0,
-		ReportState:  Fail,
-		Report:       r.ReportLogger.Collect(),
-		CreatedAtSec: NowUTCMinute().Unix(),
+		Name:        r.Name,
+		Latency:     0,
+		ReportState: Fail,
+		Report:      r.ReportLogger.Collect(),
+		CreatedAt:   NowUTCMinute(),
 	}
 }
 

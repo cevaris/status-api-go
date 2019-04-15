@@ -70,13 +70,12 @@ func WriteFileReport(ctx context.Context, r report.Request) (report.ApiReport, e
 		reportState = report.Fail
 	}
 
-	later := time.Now().UTC()
 	apiReport := report.ApiReport{
-		Name:         r.Name,
-		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
-		ReportState:  reportState,
-		Report:       reportLogger.Collect(),
-		CreatedAtSec: report.NowUTCMinute().Unix(),
+		Name:        r.Name,
+		Latency:     time.Since(now),
+		ReportState: reportState,
+		Report:      reportLogger.Collect(),
+		CreatedAt:   r.TimeMinute,
 	}
 
 	reportLogger.Info(ctx, "ran", r.Name)

@@ -33,7 +33,6 @@ func WriteTextReport(ctx context.Context, r report.Request) (report.ApiReport, e
 			reportLogger.Error(ctx, "failed to close response reader:", err)
 		}
 	}()
-	later := time.Now().UTC()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -60,11 +59,11 @@ func WriteTextReport(ctx context.Context, r report.Request) (report.ApiReport, e
 	}
 
 	apiReport := report.ApiReport{
-		Name:         r.Name,
-		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
-		ReportState:  reportState,
-		Report:       reportLogger.Collect(),
-		CreatedAtSec: report.NowUTCMinute().Unix(),
+		Name:        r.Name,
+		Latency:     time.Since(now),
+		ReportState: reportState,
+		Report:      reportLogger.Collect(),
+		CreatedAt:   r.TimeMinute,
 	}
 
 	reportLogger.Info(ctx, "ran", r.Name)

@@ -13,7 +13,6 @@ import (
 	"time"
 )
 
-
 // AwsUsWest2S3ReadFile downloads a existing file from S3
 func AwsUsWest2S3ReadFile(ctx context.Context, r report.Request) (report.ApiReport, error) {
 	reportLogger := r.ReportLogger
@@ -28,7 +27,7 @@ func AwsUsWest2S3ReadFile(ctx context.Context, r report.Request) (report.ApiRepo
 		}),
 		Region: aws.String("us-west-2"),
 	})
-	
+
 	tmpFile, err := report.CreateEmptyTmpFile()
 	if err != nil {
 		reportLogger.Error(ctx, "failed creating temp file: "+err.Error())
@@ -55,13 +54,12 @@ func AwsUsWest2S3ReadFile(ctx context.Context, r report.Request) (report.ApiRepo
 
 	reportLogger.Info(ctx, "file uploaded to ", tmpFile.Name(), "downloaded", bytes, "bytes")
 
-	later := time.Now().UTC()
 	apiReport := report.ApiReport{
-		Name:         r.Name,
-		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
-		ReportState:  report.Pass,
-		Report:       reportLogger.Collect(),
-		CreatedAtSec: report.NowUTCMinute().Unix(),
+		Name:        r.Name,
+		Latency:     time.Since(now),
+		ReportState: report.Pass,
+		Report:      reportLogger.Collect(),
+		CreatedAt:   r.TimeMinute,
 	}
 
 	reportLogger.Info(ctx, "ran", r.Name)

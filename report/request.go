@@ -2,12 +2,14 @@ package report
 
 import (
 	"github.com/cevaris/timber"
+	"time"
 )
 
 type Request struct {
 	Name         string
 	Logger       timber.Logger
 	ReportLogger *Logger
+	TimeMinute   time.Time
 }
 
 // NewRequest creates a logger that should only be used per request!!!
@@ -19,5 +21,6 @@ func NewRequest(logger timber.Logger, name string) Request {
 		Name:         name,
 		Logger:       logger,
 		ReportLogger: reportLogger,
+		TimeMinute:   NowUTCMinute(),
 	}
 }

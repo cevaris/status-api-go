@@ -65,15 +65,15 @@ func AwsUsWest2S3WriteFile(ctx context.Context, r report.Request) (report.ApiRep
 
 	reportLogger.Info(ctx, fmt.Sprintf("file uploaded to, %s", result.Location))
 
-	later := time.Now().UTC()
 	apiReport := report.ApiReport{
-		Name:         r.Name,
-		LatencyMS:    later.Sub(now).Nanoseconds() / int64(time.Millisecond),
-		ReportState:  report.Pass,
-		Report:       reportLogger.Collect(),
-		CreatedAtSec: report.NowUTCMinute().Unix(),
+		Name:        r.Name,
+		Latency:     time.Since(now),
+		ReportState: report.Pass,
+		Report:      reportLogger.Collect(),
+		CreatedAt:   r.TimeMinute,
 	}
 
+	time.Now().UnixNano()
 	reportLogger.Info(ctx, "ran", r.Name)
 	return apiReport, nil
 }

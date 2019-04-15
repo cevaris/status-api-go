@@ -82,7 +82,7 @@ func launchScheduler(ctx context.Context, wg *sync.WaitGroup, reportName string,
 	defer wg.Done()
 	logger.Info(ctx, "initial runner delay", reportName)
 	// mod 55 as we dont want jobs running at the last 5 seconds,
-	// as it could overwrite the future minute's report if the job finishes near 60th second.
+	// as it could overwrite the future minute's report if the job finishes near and after 59th second.
 	delay(time.Second * time.Duration(reportNumber%55))
 	logger.Info(ctx, "loading runner", reportName)
 
@@ -111,8 +111,8 @@ func launchScheduler(ctx context.Context, wg *sync.WaitGroup, reportName string,
 func writeReport(ctx context.Context, r report.Request, apiReport report.ApiReport, err error) {
 	reportLogger := r.ReportLogger
 
-	reportLogger.Info(ctx, "report.createdAt.sec", apiReport.CreatedAtSec)
-	reportLogger.Info(ctx, "report.latency.ms", apiReport.LatencyMS)
+	reportLogger.Info(ctx, "report.createdAt.sec", apiReport.CreatedAt)
+	reportLogger.Info(ctx, "report.latency.ms", apiReport.Latency)
 	reportLogger.Info(ctx, "report.name", apiReport.Name)
 
 	if err != nil {
