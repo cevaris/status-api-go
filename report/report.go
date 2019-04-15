@@ -24,7 +24,7 @@ type ApiReport struct {
 	CreatedAt   time.Time
 	Latency     time.Duration
 	Name        string
-	Report      []byte
+	Report      []byte `datastore:",noindex"`
 	ReportState State
 }
 

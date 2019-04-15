@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"github.com/cevaris/status/logging"
 	"math/rand"
 	"os"
@@ -32,7 +30,8 @@ func main() {
 	ctx := context.Background()
 	projectID = os.Getenv("PROJECT_ID")
 
-	_, err := datastore.NewClient(ctx, projectID)
+	var err error
+	dsClient, err = datastore.NewClient(ctx, projectID)
 	if err != nil {
 		panic(err)
 	}
@@ -58,10 +57,6 @@ func launchRunner(ctx context.Context, r report.Request, fn func(context.Context
 		defer func() {
 			if rec := recover(); rec != nil {
 				logger.Info(ctx, "Recovered in f", r.Name, rec)
-				chApiReport <- ChApiReport{
-					apiReport: report.NewApiReportErr(r),
-					err:       errors.New(fmt.Sprintf("panic thrown in %s", r.Name)),
-				}
 			}
 		}()
 
@@ -90,15 +85,19 @@ func launchScheduler(ctx context.Context, wg *sync.WaitGroup, reportName string,
 
 	duration := time.Duration(60 * time.Second)
 	for ; true; <-time.Tick(duration) {
-		ctx, cancel := context.WithTimeout(context.Background(), RunnerTotalTimeout)
+		runnerCtx := context.Background()
+		reportCtx, cancel := context.WithTimeout(runnerCtx, RunnerTotalTimeout)
 
 		request := report.NewRequest(localLogger, reportName)
 		reportLogger := request.ReportLogger
 
-		reportLogger.Info(ctx, "launching runner", reportName)
+		reportLogger.Info(reportCtx, "launching runner", reportName)
 
-		apiReport, err := launchRunner(ctx, request, status.APIReportCatalog[reportName])
-		writeReport(ctx, request, apiReport, err)
+		apiReport, err := launchRunner(reportCtx, request, status.APIReportCatalog[reportName])
+		apiReport = generateReport(reportCtx, request, apiReport, err)
+
+		// needs its own context in the case report context throws a timeout
+		saveReport(runnerCtx, request, apiReport)
 
 		// manually defer is fine, as reports "should" always finish executing
 		cancel()
@@ -108,7 +107,16 @@ func launchScheduler(ctx context.Context, wg *sync.WaitGroup, reportName string,
 	panic("runner died :( " + reportName)
 }
 
-func writeReport(ctx context.Context, r report.Request, apiReport report.ApiReport, err error) {
+func saveReport(ctx context.Context, r report.Request, apiReport report.ApiReport) {
+	key := r.Key()
+	_, err := dsClient.Put(ctx, key, &apiReport)
+	if err != nil {
+		logger.Error(ctx, "Failed to save ApiReport", key, err)
+	}
+}
+
+// generateReport pretty prints report state to logs, *report.ApiReport since we update logs
+func generateReport(ctx context.Context, r report.Request, apiReport report.ApiReport, err error) report.ApiReport {
 	reportLogger := r.ReportLogger
 
 	reportLogger.Info(ctx, "report.createdAt.sec", apiReport.CreatedAt)
@@ -125,7 +133,12 @@ func writeReport(ctx context.Context, r report.Request, apiReport report.ApiRepo
 		reportLogger.Error(ctx, "report.state", apiReport.ReportState)
 	}
 
+	// update report data
+	apiReport.Report = r.ReportLogger.Collect()
+
 	//logger.Info(ctx, "report.log", len(reportLogger.Collect()), "bytes")
+
+	return apiReport
 }
 
 // https://play.golang.org/p/u2s7gNZvMOG

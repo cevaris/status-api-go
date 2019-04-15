@@ -11,12 +11,11 @@ func HTTPErrorReport(ctx context.Context, r report.Request) (report.ApiReport, e
 
 	reportLogger.Debug(ctx, "starting", r.Name)
 
-	_, err := http.Get("http://no-such-api.com")
+	_, err := http.Get("really broken api hostname")
 	if err != nil {
 		reportLogger.Error(ctx, "EXPECTED: failed to get", err)
 		return report.NewApiReportErr(r), err
 	}
 
-	var apiReport report.ApiReport
-	return apiReport, err
+	panic(r.Name + " failure report is broken; expected http error")
 }
