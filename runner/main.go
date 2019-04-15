@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/cevaris/status/logging"
 	"math/rand"
 	"os"
@@ -57,6 +59,11 @@ func launchRunner(ctx context.Context, r report.Request, fn func(context.Context
 		defer func() {
 			if rec := recover(); rec != nil {
 				logger.Info(ctx, "Recovered in f", r.Name, rec)
+				// publish report, otherwise the runner timeout after panic
+				chApiReport <- ChApiReport{
+					apiReport: report.NewApiReportErr(r),
+					err:       errors.New(fmt.Sprintf("panic thrown in %s", r.Name)),
+				}
 			}
 		}()
 
