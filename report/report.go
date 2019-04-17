@@ -28,6 +28,35 @@ type ApiReport struct {
 	ReportState State
 }
 
+type ApiReportJson struct {
+	CreatedAt   string `json:"created_at"`
+	Latency     string `json:"latency"`
+	Name        string `json:"name"`
+	ReportState string `json:"report_state"`
+}
+
+func (r *ApiReport) PresentJson() ApiReportJson {
+	return ApiReportJson{
+		CreatedAt:   r.CreatedAt.Format(time.RFC3339),
+		Latency:     r.Latency.String(),
+		Name:        r.Name,
+		ReportState: r.ReportState.Name(),
+	}
+}
+
+func (s State) Name() string {
+	switch s {
+	case Pass:
+		return "PASS"
+	case Inconclusive:
+		return "INCONCLUSIVE"
+	case Fail:
+		return "FAIL"
+	default:
+		return "UNKNOWN"
+	}
+}
+
 // NowMinute returns now, truncated down to the minute. Useful for timestamping with minute grainularity.
 // https://play.golang.org/p/cpW3itpYHia
 func NowUTCMinute() time.Time {
