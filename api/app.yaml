@@ -9,3 +9,7 @@ handlers:
 
 skip_files:
 - .*node_modules
+
+
+env_variables:
+  PROJECT_ID: 'status-api-dev'
