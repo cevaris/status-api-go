@@ -75,24 +75,31 @@ func getReports(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newKeys := make([]*datastore.Key, 0)
-	for d := fromTime; d.Day() == toTime.Day(); d = d.Add(time.Hour) {
-		for h := fromTime; h.Hour() == toTime.Hour(); h = h.Add(time.Hour) {
-			for m := fromTime; m.Minute() == toTime.Minute(); m = m.Add(time.Minute) {
-				key := datastore.NameKey(
-					report.KindApiReportMin,
-					fmt.Sprintf("%s:%d", reportName, report.UTCMinute(m)),
-					nil,
-				)
-				newKeys = append(newKeys, key)
-			}
-		}
-	}
+	//newKeys := make([]*datastore.Key, 0)
+	//for d := fromTime; d.Day() == toTime.Day(); d = d.Add(time.Hour * 24) {
+	//	logger.Info(ctx, "day", d.Day())
+	//	for h := fromTime; h.Hour() == toTime.Hour(); h = h.Add(time.Hour) {
+	//		logger.Info(ctx, "hour", d.Hour())
+	//		for m := fromTime; m.Minute() == toTime.Minute(); m = m.Add(time.Minute) {
+	//			logger.Info(ctx, "min", d.Minute())
+	//			key := datastore.NameKey(
+	//				report.KindApiReportMin,
+	//				fmt.Sprintf("%s:%d", reportName, report.UTCMinute(m)),
+	//				nil,
+	//			)
+	//			newKeys = append(newKeys, key)
+	//		}
+	//	}
+	//}
 
-	keys := []*datastore.Key{
-		datastore.NameKey(report.KindApiReportMin, "aws_us_west_2_s3_read_file:1555340160", nil),
-		datastore.NameKey(report.KindApiReportMin, "does not exist", nil),
-		datastore.NameKey(report.KindApiReportMin, "aws_us_west_2_s3_read_file:1555340220", nil),
+	keys := make([]*datastore.Key, 0)
+	for d := fromTime; d.Unix() < toTime.Unix(); d = d.Add(time.Minute) {
+		key := datastore.NameKey(
+			report.KindApiReportMin,
+			fmt.Sprintf("%s:%d", reportName, report.UTCMinute(d).Unix()),
+			nil,
+		)
+		keys = append(keys, key)
 	}
 
 	var reports = make([]report.ApiReport, len(keys))
