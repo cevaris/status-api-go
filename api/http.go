@@ -65,6 +65,7 @@ func GetString(ctx context.Context, r *http.Request, paramName string) (string, 
 		logger.Error(ctx, msg)
 		return "", errors.New(msg)
 	}
+
 	return str, nil
 }
 

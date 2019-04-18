@@ -4,10 +4,12 @@ import (
 	"cloud.google.com/go/datastore"
 	"errors"
 	"fmt"
+	"github.com/cevaris/httprouter"
 	"github.com/cevaris/status/report"
 	"github.com/cevaris/timber"
 	"log"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"time"
 
@@ -18,8 +20,6 @@ var logger = timber.NewAppEngineLogger()
 var projectID = os.Getenv("PROJECT_ID")
 
 func main() {
-	http.HandleFunc("/", indexHandler)
-	http.HandleFunc("/reports.json", getReports)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -27,26 +27,20 @@ func main() {
 		log.Printf("Defaulting to port %s", port)
 	}
 
+	router := httprouter.New()
+	router.GET("/reports/:ID", getReports)
+	router.GET("/debug/pprof/goroutine", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) { pprof.Index(w, r) })
+	http.Handle("/", router)
+
 	log.Printf("Listening on port %s", port)
 	appengine.Main()
 }
 
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-	_, err := fmt.Fprint(w, "Hello, World!")
-	if err != nil {
-		fmt.Println("failed to write", err)
-	}
-}
-
-func getReports(w http.ResponseWriter, r *http.Request) {
+func getReports(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	ctx := appengine.NewContext(r)
-	reportName, err := GetString(ctx, r, "name")
-	if err != nil {
-		serializeErr(ctx, w, err)
+	reportName := ps.ByName("ID")
+	if len(reportName) == 0{
+		serializeErr(ctx, w, errors.New("missing require parameter 'ID'"))
 		return
 	}
 
@@ -74,23 +68,6 @@ func getReports(w http.ResponseWriter, r *http.Request) {
 		serializeErr(ctx, w, err)
 		return
 	}
-
-	//newKeys := make([]*datastore.Key, 0)
-	//for d := fromTime; d.Day() == toTime.Day(); d = d.Add(time.Hour * 24) {
-	//	logger.Info(ctx, "day", d.Day())
-	//	for h := fromTime; h.Hour() == toTime.Hour(); h = h.Add(time.Hour) {
-	//		logger.Info(ctx, "hour", d.Hour())
-	//		for m := fromTime; m.Minute() == toTime.Minute(); m = m.Add(time.Minute) {
-	//			logger.Info(ctx, "min", d.Minute())
-	//			key := datastore.NameKey(
-	//				report.KindApiReportMin,
-	//				fmt.Sprintf("%s:%d", reportName, report.UTCMinute(m)),
-	//				nil,
-	//			)
-	//			newKeys = append(newKeys, key)
-	//		}
-	//	}
-	//}
 
 	keys := make([]*datastore.Key, 0)
 	for d := fromTime; d.Unix() < toTime.Unix(); d = d.Add(time.Minute) {
