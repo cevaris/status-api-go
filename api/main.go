@@ -2,19 +2,20 @@ package main
 
 import (
 	"cloud.google.com/go/datastore"
-	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/cevaris/status/report"
 	"github.com/cevaris/timber"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"google.golang.org/appengine"
 )
 
 var logger = timber.NewAppEngineLogger()
+var projectID = os.Getenv("PROJECT_ID")
 
 func main() {
 	http.HandleFunc("/", indexHandler)
@@ -42,70 +43,81 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getReports(w http.ResponseWriter, r *http.Request) {
-	projectID := os.Getenv("PROJECT_ID")
 	ctx := appengine.NewContext(r)
+	reportName, err := GetString(ctx, r, "name")
+	if err != nil {
+		serializeErr(ctx, w, err)
+		return
+	}
+
+	fromTime, err := GetTime(ctx, r, "from")
+	if err != nil {
+		serializeErr(ctx, w, err)
+		return
+	}
+
+	toTime, err := GetTime(ctx, r, "to")
+	if err != nil {
+		serializeErr(ctx, w, err)
+		return
+	}
+
+	if fromTime.After(toTime) {
+		serializeErr(ctx, w, errors.New(fmt.Sprintf("'from' param value (%s) must be before 'to' param value (%s)", fromTime, toTime)))
+		return
+	}
+
+	logger.Info(ctx, reportName, fromTime, toTime)
+
 	dsClient, err := datastore.NewClient(ctx, projectID)
 	if err != nil {
-		panic(err)
+		serializeErr(ctx, w, err)
+		return
+	}
+
+	newKeys := make([]*datastore.Key, 0)
+	for d := fromTime; d.Day() == toTime.Day(); d = d.Add(time.Hour) {
+		for h := fromTime; h.Hour() == toTime.Hour(); h = h.Add(time.Hour) {
+			for m := fromTime; m.Minute() == toTime.Minute(); m = m.Add(time.Minute) {
+				key := datastore.NameKey(
+					report.KindApiReportMin,
+					fmt.Sprintf("%s:%d", reportName, report.UTCMinute(m)),
+					nil,
+				)
+				newKeys = append(newKeys, key)
+			}
+		}
 	}
 
 	keys := []*datastore.Key{
-		datastore.NameKey("ApiReportMin", "aws_us_west_2_s3_read_file:1555340160", nil),
-		datastore.NameKey("ApiReportMin", "aws_us_west_2_s3_read_file:1555340220", nil),
+		datastore.NameKey(report.KindApiReportMin, "aws_us_west_2_s3_read_file:1555340160", nil),
+		datastore.NameKey(report.KindApiReportMin, "does not exist", nil),
+		datastore.NameKey(report.KindApiReportMin, "aws_us_west_2_s3_read_file:1555340220", nil),
 	}
 
 	var reports = make([]report.ApiReport, len(keys))
 	err = dsClient.GetMulti(ctx, keys, reports)
 	if err != nil {
-		panic(err)
+		if me, ok := err.(datastore.MultiError); ok {
+			logger.Error(ctx, "got here", err.Error())
+			for i, merr := range me {
+				if merr == datastore.ErrNoSuchEntity {
+					reports[i] = report.ApiReport{}
+				}
+			}
+		} else {
+			serializeErr(ctx, w, err)
+			return
+		}
 	}
 
-	var presentable = make([]report.ApiReportJson, len(keys))
-	for i, _ := range reports {
-		presentable[i] = reports[i].PresentJson()
+	var presentable = make([]report.ApiReportJson, 0)
+	for _, x := range reports {
+		if x.Name != "" { // nil api report
+			presentable = append(presentable, x.PresentJson())
+		}
 	}
 
-	logger.Info(ctx, "count", fmt.Sprintf("%+v", reports))
-
-	//_, writeErr := fmt.Fprint(w, reports)
-	//if writeErr != nil {
-	//	fmt.Println("failed to write", writeErr)
-	//}
-	SerializeData(ctx, w, presentable, true)
-}
-
-type Response struct {
-	Status  string      `json:"status,omitempty"`
-	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
-}
-
-var serverError = Response{
-	Status:  "error",
-	Message: "internal server error",
-}
-var serverErrorJSONBytes, _ = marshal(serverError, true)
-var serverErrorJSON = string(serverErrorJSONBytes)
-
-func marshal(data interface{}, prettyJSON bool) ([]byte, error) {
-	if prettyJSON {
-		return json.MarshalIndent(data, "", "    ")
-	}
-	return json.Marshal(data)
-}
-func SerializeData(ctx context.Context, w http.ResponseWriter, data interface{}, isPrettyJSON bool) {
-	response := Response{Status: "ok", Data: data}
-	b, err := marshal(response, isPrettyJSON)
-	if err != nil {
-		logger.Error(ctx, "failed to serialize json", err, "for", response)
-		http.Error(w, serverErrorJSON, 500)
-		return
-	}
-	_, err = w.Write(b)
-	if err != nil {
-		logger.Error(ctx, "failed to serialize json", err, "for", response)
-		http.Error(w, serverErrorJSON, 500)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
+	//logger.Info(ctx, "count", fmt.Sprintf("%+v", reports))
+	serializeData(ctx, w, presentable, true)
 }

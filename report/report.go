@@ -61,7 +61,11 @@ func (s State) Name() string {
 // https://play.golang.org/p/cpW3itpYHia
 func NowUTCMinute() time.Time {
 	now := time.Now().UTC()
-	return now.Truncate(60 * time.Second)
+	return UTCMinute(now)
+}
+
+func UTCMinute(t time.Time) time.Time {
+	return t.UTC().Truncate(60 * time.Second)
 }
 
 //FmtHTTPRequest returns a formatted string of http request
