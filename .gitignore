@@ -12,4 +12,4 @@
 *.out
 
 tmp/
-gin-bin
+vendor/

@@ -7,6 +7,8 @@ PROJECT_ID=status-api-dev
 APPNAME_RUNNER=api-status-runner
 BUNDLE_LOCATION_RUNNER=$(shell echo "gs://${PROJECT_ID}/${APPNAME_RUNNER}/${VERSION}.tar")
 
+# try this at some point https://stackoverflow.com/a/48132666/3538289
+
 all: build-runner
 
 run-runner:

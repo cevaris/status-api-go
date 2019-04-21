@@ -1,15 +1,9 @@
-runtime: go
-api_version: go1.9
+runtime: go111
 
 handlers:
 - url: /.*
   secure: always
-  script: _go_app
-
-
-skip_files:
-- .*node_modules
-
+  script: auto
 
 env_variables:
   PROJECT_ID: 'status-api-dev'
