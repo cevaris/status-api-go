@@ -79,14 +79,14 @@ func getReports(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		keys = append(keys, key)
 	}
 
-	var reports = make([]report.ApiReport, len(keys))
+	var reports = make([]report.ApiReportRecord, len(keys))
 	err = dsClient.GetMulti(ctx, keys, reports)
 	if err != nil {
 		if me, ok := err.(datastore.MultiError); ok {
 			logger.Error(ctx, "got here", err.Error())
 			for i, merr := range me {
 				if merr == datastore.ErrNoSuchEntity {
-					reports[i] = report.ApiReport{}
+					reports[i] = report.ApiReportRecord{}
 				}
 			}
 		} else {
@@ -98,7 +98,8 @@ func getReports(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var presentable = make([]report.ApiReportJson, 0)
 	for _, x := range reports {
 		if x.Name != "" { // nil api report
-			presentable = append(presentable, x.PresentJson())
+			apiReport := x.Lift()
+			presentable = append(presentable, apiReport.Present())
 		}
 	}
 

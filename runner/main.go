@@ -116,7 +116,8 @@ func launchScheduler(ctx context.Context, wg *sync.WaitGroup, reportName string,
 
 func saveReport(ctx context.Context, r report.Request, apiReport report.ApiReport) {
 	key := r.Key()
-	_, err := dsClient.Put(ctx, key, &apiReport)
+	record := apiReport.Record()
+	_, err := dsClient.Put(ctx, key, &record)
 	if err != nil {
 		logger.Error(ctx, "Failed to save ApiReport", key, err)
 	}
