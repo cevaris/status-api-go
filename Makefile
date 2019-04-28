@@ -14,6 +14,9 @@ all: build-runner
 run-runner:
 	PROJECT_ID=${PROJECT_ID} go run runner/main.go
 
+run-api:
+	PROJECT_ID=${PROJECT_ID} go run api/main.go
+
 build-runner:
 	GOOS=linux GOARCH=amd64 go build -v -o ${TMP}/runner ./runner
 	tar -c -f ${TMP}/runner-bundle.tar -C ${TMP} runner
