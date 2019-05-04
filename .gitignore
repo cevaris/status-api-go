@@ -1,4 +1,8 @@
 # Binaries for programs and plugins
+*
+!*/
+!/src/github.com/cevaris/status/**
+
 *.exe
 *.exe~
 *.dll

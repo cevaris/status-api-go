@@ -15,7 +15,7 @@ run-runner:
 	PROJECT_ID=${PROJECT_ID} go run runner/main.go
 
 run-api:
-	PROJECT_ID=${PROJECT_ID} go run api/main.go
+	dev_appserver.py api
 
 build-runner:
 	GOOS=linux GOARCH=amd64 go build -v -o ${TMP}/runner ./runner
